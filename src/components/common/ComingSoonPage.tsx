@@ -36,17 +36,15 @@ export default function ComingSoonPage({ title }: ComingSoonPageProps) {
                 <span>Back to Home</span>
               </Link>
               
-              {/* Title - centered */}
-              <div className="flex justify-center pt-2">
-                <h1 className="font-black tracking-tight text-[32px] sm:text-[48px] leading-none text-[#ff4d00]">
-                  {title}
-                </h1>
-              </div>
+              {/* Title - centered - removed since POP! is now universal */}
             </div>
 
             {/* Coming Soon Content */}
             <div className="flex flex-col items-center justify-center h-[calc(100%-120px)] text-center">
               <div className="mb-8">
+                <h1 className="font-black tracking-tight text-[32px] sm:text-[48px] leading-none text-[#ff4d00] mb-4">
+                  {title}
+                </h1>
                 <h2 className="text-4xl font-bold text-white mb-4">Coming Soon</h2>
                 <p className="text-xl text-gray-400 max-w-md">
                   We're working hard to bring you {title.toLowerCase()}. 

@@ -17,14 +17,14 @@ export default function PopHomeWithTheme() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="h-screen w-screen bg-[#D9D9D9] dark:bg-black text-gray-900 dark:text-white overflow-hidden">
+    <div className="h-screen w-screen bg-[#0e0e0e] text-white overflow-hidden">
       {/* Outer dotted paper backdrop */}
       <div className="relative h-full w-full">
         <DottedPaperBackdrop />
 
         {/* Framed board - full screen */}
         <div className="relative h-full w-full">
-          <div className="h-full bg-white dark:bg-gray-900 shadow-xl">
+          <div className="h-full bg-[#1f1f1f] shadow-xl">
             {/* Main content area - full height */}
             <div className="relative h-full overflow-hidden">
               {/* Title at top center */}
@@ -33,6 +33,7 @@ export default function PopHomeWithTheme() {
                   POP!
                 </h1>
               </div>
+
               {/* Inner square grid background */}
               <InnerGrid />
 
@@ -45,8 +46,8 @@ export default function PopHomeWithTheme() {
                     placeholder="ENTER ADDRESS:"
                   />
                 </div>
-                <Link href="/canvas">
-                  <button className="w-[240px] rounded-md border border-white/15 bg-[#d9d9d9] px-4 py-2 text-sm font-semibold text-[#1a1a1a] shadow hover:bg-[#e0e0e0] transition-colors">
+                <Link href="/blueprint">
+                  <button className="w-[240px] rounded-md border border-white/15 bg-[#ff4d00] px-4 py-2 text-sm font-semibold text-white shadow hover:bg-[#e64400] transition-colors">
                     Start Layout
                   </button>
                 </Link>
