@@ -12,27 +12,36 @@ export default function LayoutSelectionPage() {
     { id: 5, name: "Conference", description: "Meeting rooms and networking areas" },
     { id: 6, name: "Wedding", description: "Ceremony and reception layouts" },
   ];
+  const handleReturnHome = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('popSkipLanding', 'true');
+    }
+  };
 
   return (
-    <div className="h-screen w-screen bg-[#0e0e0e] text-white overflow-hidden">
+    <div className="h-screen w-screen bg-[#1a1a1a] text-white overflow-hidden">
       {/* Outer dotted paper backdrop */}
       <div className="relative h-full w-full">
         <DottedPaperBackdrop />
 
         {/* Main content */}
         <div className="relative h-full w-full">
-          <div className="h-full bg-[#1f1f1f] shadow-xl">
+          <div className="h-full bg-[#2a2a2a] shadow-xl">
             {/* Header */}
             <div className="relative p-6">
               {/* Back button */}
-              <Link href="/blueprint" className="absolute left-6 top-6 flex items-center space-x-2 hover:opacity-80 transition-opacity">
+              <Link
+                href="/"
+                onClick={handleReturnHome}
+                className="absolute left-6 top-6 flex items-center space-x-2 hover:opacity-80 transition-opacity"
+              >
                 <ArrowLeft className="h-5 w-5" />
-                <span>Back to Blueprint</span>
+                <span>Back to Home</span>
               </Link>
 
               {/* Title - centered */}
               <div className="flex justify-center pt-2">
-                <h1 className="font-black tracking-tight text-[32px] sm:text-[48px] leading-none text-[#ff4d00]">
+                <h1 className="font-black tracking-tight text-[32px] sm:text-[48px] leading-none text-[#ffffff]">
                   Select Layout Design
                 </h1>
               </div>
@@ -45,16 +54,16 @@ export default function LayoutSelectionPage() {
                   {layoutTemplates.map((template) => (
                     <Link key={template.id} href="/designlabs">
                       <div className="group cursor-pointer">
-                        <div className="bg-[#2a2a2a] border border-white/10 rounded-lg p-6 hover:bg-[#3a3a3a] transition-colors">
-                          <div className="h-32 bg-[#3a3a3a] rounded-md mb-4 flex items-center justify-center">
-                            <div className="text-[#ff4d00] text-2xl font-bold">
+                        <div className="bg-[#333333] border border-gray-600/20 rounded-lg p-6 hover:bg-[#444444] transition-colors">
+                          <div className="h-32 bg-[#444444] rounded-md mb-4 flex items-center justify-center">
+                            <div className="text-[#ffffff] text-2xl font-bold">
                               {template.name.split(' ')[0]}
                             </div>
                           </div>
                           <h3 className="text-lg font-semibold text-white mb-2">
                             {template.name}
                           </h3>
-                          <p className="text-sm text-[#d9d9d9] opacity-80">
+                          <p className="text-sm text-[#d0d0d0] opacity-80">
                             {template.description}
                           </p>
                         </div>

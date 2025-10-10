@@ -1,8 +1,13 @@
 'use client';
 
 import Link from "next/link";
-import { useState } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import clsx from "clsx";
 import ThemeToggle from '@/components/common/ThemeToggle';
+import { useThemeContext } from '@/components/providers/ThemeProvider';
+import { BeaconPin } from '@/components/icons/BeaconPin';
 
 /**
  * POP! Home – Dark Mode (full screen, no circles)
@@ -15,59 +20,205 @@ import ThemeToggle from '@/components/common/ThemeToggle';
 
 export default function PopHomeWithTheme() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [address, setAddress] = useState('');
+  const [landingVisible, setLandingVisible] = useState(true);
+  const [shakeStage, setShakeStage] = useState(false);
+  const router = useRouter();
+  const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { theme } = useThemeContext();
+  const isDarkTheme = theme === 'dark';
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const skipLanding = sessionStorage.getItem('popSkipLanding') === 'true';
+    setLandingVisible(!skipLanding);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (shakeTimeoutRef.current) {
+        clearTimeout(shakeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleStartLayout = () => {
+    if (address.trim()) {
+      localStorage.setItem('venueAddress', address.trim());
+      router.push(`/blueprint?address=${encodeURIComponent(address.trim())}&flow=search`);
+    }
+  };
+
+  const handleLandingReveal = () => {
+    setLandingVisible(false);
+    setShakeStage(true);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('popSkipLanding', 'true');
+    }
+    if (shakeTimeoutRef.current) {
+      clearTimeout(shakeTimeoutRef.current);
+    }
+    shakeTimeoutRef.current = setTimeout(() => setShakeStage(false), 700);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  };
+
+  const handleReigniteLanding = () => {
+    setShakeStage(false);
+    setLandingVisible(true);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('popSkipLanding');
+    }
+  };
+
+  const boardClassName = clsx(
+    "h-full shadow-[0_0_32px_rgba(0,0,0,0.35)] transition-transform duration-500",
+    isDarkTheme ? "bg-[#111111]" : "bg-[#fcfcfc]",
+    shakeStage && "animate-screen-shake"
+  );
+
+  const containerClassName = clsx(
+    "relative h-screen w-screen overflow-hidden transition-colors duration-500",
+    isDarkTheme ? "bg-[#050505] text-[#f2f2f2]" : "bg-[#f7f7f7] text-[#1f1f1f]"
+  );
+
+  const inputClassName = clsx(
+    "w-full rounded-lg border px-4 py-3 text-sm tracking-wide outline-none shadow-inner transition",
+    isDarkTheme
+      ? "border-[#3a3a3a] bg-[#1a1a1a] text-[#f2f2f2] placeholder-[#9a9a9a] focus:border-[#4c4c4c] focus:ring-2 focus:ring-[#4c4c4c]/40"
+      : "border-[#c9c9c9] bg-white text-[#1f1f1f] placeholder-[#7a7a7a] focus:border-[#a8a8a8] focus:ring-2 focus:ring-[#a8a8a8]/40"
+  );
+
+  const cardBorderClass = isDarkTheme
+    ? "border-[#3a3a3a] bg-[#1b1b1b]"
+    : "border-[#d1d1d1] bg-white/85";
+
+  const ctaButtonClass = clsx(
+    "w-[240px] rounded-lg border px-4 py-2 text-sm font-semibold shadow-[0_0_24px_rgba(0,0,0,0.25)] transition-all hover:scale-[1.02]",
+    isDarkTheme
+      ? "border-white bg-black text-white hover:bg-white hover:text-black hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]"
+      : "border-[#b6b6b6] bg-gradient-to-r from-[#f5f5f5] via-[#e8e8e8] to-[#d9d9d9] text-[#1f1f1f] hover:shadow-[0_0_28px_rgba(0,0,0,0.2)]"
+  );
+  const taglineClass = isDarkTheme ? "text-white/60" : "text-[#4a4a4a]/70";
+  const exploreLinkClass = isDarkTheme
+    ? "text-xs uppercase tracking-[0.35em] text-[#bdbdbd] hover:text-white transition-colors"
+    : "text-xs uppercase tracking-[0.35em] text-[#5a5a5a] hover:text-[#1f1f1f] transition-colors";
+  const hamburgerClass = clsx(
+    "absolute left-4 top-6 z-30 h-10 w-10 flex flex-col items-center justify-center gap-1.5 rounded-md border transition-colors",
+    isDarkTheme
+      ? "border-white/10 bg-[#181818] hover:bg-[#222222]"
+      : "border-[#d8d8d8] bg-white/80 hover:bg-white"
+  );
+  const hamburgerBarClass = isDarkTheme ? "bg-[#f1f1f1]" : "bg-[#2f2f2f]";
+  const sidebarNavClass = isDarkTheme
+    ? "space-y-2 text-[14px] font-semibold tracking-tight text-[#e0e0e0]"
+    : "space-y-2 text-[14px] font-semibold tracking-tight text-[#1f1f1f]";
+  const profileTextClass = isDarkTheme ? "text-[#e0e0e0]" : "text-[#1f1f1f]";
 
   return (
-    <div className="h-screen w-screen bg-[#0e0e0e] text-white overflow-hidden">
+    <div className={containerClassName}>
+      {landingVisible && <LandingIntro onReveal={handleLandingReveal} isDark={isDarkTheme} />}
+
       {/* Outer dotted paper backdrop */}
       <div className="relative h-full w-full">
-        <DottedPaperBackdrop />
+        <DottedPaperBackdrop isDark={isDarkTheme} />
 
         {/* Framed board - full screen */}
         <div className="relative h-full w-full">
-          <div className="h-full bg-[#1f1f1f] shadow-xl">
+          <div className={boardClassName}>
             {/* Main content area - full height */}
             <div className="relative h-full overflow-hidden">
               {/* Title at top center */}
               <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-30">
-                <h1 className="font-black tracking-tight text-[38px] sm:text-[56px] leading-none text-[#ff4d00]">
+                <button
+                  type="button"
+                  onClick={handleReigniteLanding}
+                  className={clsx(
+                    "font-black tracking-tight text-[38px] sm:text-[56px] leading-none transition hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
+                    isDarkTheme ? "text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.6)]" : "text-[#1a1a1a] drop-shadow-[0_0_10px_rgba(0,0,0,0.15)]"
+                  )}
+                  aria-label="Replay POP! landing experience"
+                >
                   POP!
-                </h1>
+                </button>
               </div>
 
               {/* Inner square grid background */}
-              <InnerGrid />
+              <InnerGrid isDark={isDarkTheme} />
 
               {/* Center card with search + CTA */}
               <div className="absolute inset-0 flex items-center justify-center z-10">
                 <div className="w-full max-w-[720px] flex flex-col items-center gap-6 px-4">
-                <div className="w-full rounded-md border border-white/10 bg-white/5 p-2 backdrop-blur">
-                  <input
-                    className="w-full rounded-md border border-black/20 bg-[#d9d9d9] px-4 py-3 text-sm tracking-wide text-[#1a1a1a] placeholder-black/50 outline-none shadow-inner"
-                    placeholder="ENTER ADDRESS:"
-                  />
-                </div>
-                <Link href="/blueprint">
-                  <button className="w-[240px] rounded-md border border-white/15 bg-[#ff4d00] px-4 py-2 text-sm font-semibold text-white shadow hover:bg-[#e64400] transition-colors">
-                    Start Layout
+                  <p className={clsx("text-center text-sm uppercase tracking-[0.25em]", taglineClass)}>
+                    drop an address, unlock the night
+                  </p>
+                  <div className={clsx("w-full rounded-xl p-2 backdrop-blur-md shadow-[0_0_24px_rgba(0,0,0,0.18)]", cardBorderClass)}>
+                    <input
+                      className={inputClassName}
+                      placeholder="ENTER ADDRESS"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      ref={inputRef}
+                    />
+                  </div>
+                  <button
+                    onClick={handleStartLayout}
+                    className={clsx(ctaButtonClass, !address.trim() && "opacity-40 cursor-not-allowed")}
+                    disabled={!address.trim()}
+                  >
+                    render venue portal
                   </button>
-                </Link>
+                  <Link href="/intake" className={exploreLinkClass}>
+                    need help finding your venue?
+                  </Link>
+                  <Link
+                    href="/designlabs"
+                    className="flex flex-col items-center gap-2 group"
+                  >
+                    <div className="h-18 w-18">
+                      <Image
+                        src="/lab-flask.svg"
+                        alt="DesignLabz"
+                        width={64}
+                        height={64}
+                        className="h-16 w-16 transition-transform duration-300 group-hover:scale-110"
+                      />
+                    </div>
+                    <span className="text-xs uppercase tracking-[0.35em] text-gray-400 group-hover:text-white transition-colors">
+                      explore designlabz
+                    </span>
+                  </Link>
                 </div>
               </div>
 
               {/* Hamburger Button - Always visible */}
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="absolute left-4 top-6 z-30 h-10 w-10 flex flex-col items-center justify-center gap-1.5 rounded-md border border-white/15 bg-[#1f1f1f] p-2 shadow hover:bg-[#2a2a2a] transition-colors"
+                className={hamburgerClass}
               >
-                <span className={`h-1 bg-[#d9d9d9] transition-all duration-300 ${
-                  sidebarOpen ? 'w-6 rotate-45 translate-y-1.5' : 'w-6'
-                }`} />
-                <span className={`h-1 bg-[#d9d9d9] transition-all duration-300 ${
-                  sidebarOpen ? 'w-0 opacity-0' : 'w-6'
-                }`} />
-                <span className={`h-1 bg-[#d9d9d9] transition-all duration-300 ${
-                  sidebarOpen ? 'w-6 -rotate-45 -translate-y-1.5' : 'w-6'
-                }`} />
+                <span
+                  className={clsx(
+                    "h-1 transition-all duration-300",
+                    hamburgerBarClass,
+                    sidebarOpen ? "w-6 rotate-45 translate-y-1.5" : "w-6"
+                  )}
+                />
+                <span
+                  className={clsx(
+                    "h-1 transition-all duration-300",
+                    hamburgerBarClass,
+                    sidebarOpen ? "w-0 opacity-0" : "w-6"
+                  )}
+                />
+                <span
+                  className={clsx(
+                    "h-1 transition-all duration-300",
+                    hamburgerBarClass,
+                    sidebarOpen ? "w-6 -rotate-45 -translate-y-1.5" : "w-6"
+                  )}
+                />
               </button>
 
               {/* Theme Toggle Button - Top right */}
@@ -84,19 +235,27 @@ export default function PopHomeWithTheme() {
                 <div className={`transition-all duration-300 overflow-hidden ${
                   sidebarOpen ? 'opacity-100 mt-20 px-4 py-5' : 'opacity-0 h-0'
                 }`}>
-                  <nav className="space-y-2 text-[14px] font-semibold tracking-tight text-[#e7e7e7]">
-                    <NavItem label="designlabs" href="/designlabs" />
-                    <NavItem label="MyEvents" href="/myevents" />
-                    <NavItem label="marketplace" href="/marketplace" />
-                    <NavItem label="Metrics" href="/metrics" />
-                    <NavItem label="Settings" href="/settings" />
+                  <nav className={sidebarNavClass}>
+                    <NavItem label="discover" href="/unlstd" isDark={isDarkTheme} />
+                    <NavItem label="designlabs" href="/designlabs" isDark={isDarkTheme} />
+                    <NavItem label="MyEvents" href="/myevents" isDark={isDarkTheme} />
+                    <NavItem label="marketplace" href="/marketplace" isDark={isDarkTheme} />
+                    <NavItem label="Metrics" href="/metrics" isDark={isDarkTheme} />
+                    <NavItem label="Settings" href="/settings" isDark={isDarkTheme} />
                   </nav>
 
                   {/* Bottom profile area */}
-                  <div className="absolute inset-x-0 bottom-3 px-4 text-[13px] text-[#e7e7e7]">
-                    <div className="mb-2 h-10 w-10 rounded-full border border-white/20 bg-[#2a2a2a]" />
+                  <div className={clsx("absolute inset-x-0 bottom-3 px-4 text-[13px]", profileTextClass)}>
+                    <div className={clsx("mb-2 h-10 w-10 rounded-full border", isDarkTheme ? "border-white/15 bg-[#1c1c1c]" : "border-[#d0d0d0] bg-white/85")} />
                     <div className="pl-0.5 text-xs opacity-70">Name</div>
-                    <button className="mt-2 rounded border border-white/15 px-2 py-1 text-left text-xs opacity-90 hover:bg-white/5 transition-colors">
+                    <button
+                      className={clsx(
+                        "mt-2 rounded border px-2 py-1 text-left text-xs transition-colors",
+                        isDarkTheme
+                          ? "border-white/15 opacity-90 hover:bg-white/10"
+                          : "border-[#d0d0d0] text-[#1f1f1f] hover:bg-white"
+                      )}
+                    >
                       invite
                     </button>
                   </div>
@@ -110,10 +269,14 @@ export default function PopHomeWithTheme() {
   );
 }
 
-function NavItem({ label, href }: { label: string; href: string }) {
+function NavItem({ label, href, isDark }: { label: string; href: string; isDark: boolean }) {
+  const itemClass = clsx(
+    "w-full rounded-sm px-1 py-1.5 transition cursor-pointer",
+    isDark ? "hover:bg-white/10" : "hover:bg-black/5"
+  );
   return (
     <Link href={href}>
-      <div className="w-full rounded-sm px-1 py-1.5 transition hover:bg-white/5 cursor-pointer">
+      <div className={itemClass}>
         {label}
       </div>
     </Link>
@@ -121,38 +284,98 @@ function NavItem({ label, href }: { label: string; href: string }) {
 }
 
 /** Dotted paper background (outside the main board) */
-function DottedPaperBackdrop() {
+function DottedPaperBackdrop({ isDark }: { isDark: boolean }) {
+  const dotColor = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)";
+  const cornerBorderClass = isDark ? "border-white/20" : "border-black/10";
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-0 -z-10"
       style={{
         backgroundImage:
-          "radial-gradient(rgba(255,255,255,0.14) 1px, transparent 1px)",
+          `radial-gradient(${dotColor} 1px, transparent 1px)`,
         backgroundSize: "18px 18px",
         backgroundPosition: "-9px -9px",
       }}
     >
       {/* Rounded corner squiggle (top-right) */}
-      <div className="absolute right-2 top-2 h-10 w-10 rounded-tl-[22px] border-l-2 border-t-2 border-white/30" />
+      <div className={clsx("absolute right-2 top-2 h-10 w-10 rounded-tl-[22px] border-l-2 border-t-2", cornerBorderClass)} />
     </div>
   );
 }
 
 /** Inner square grid like the mock */
-function InnerGrid() {
+function InnerGrid({ isDark }: { isDark: boolean }) {
+  const baseFillStyle = {
+    backgroundImage: isDark
+      ? "radial-gradient(circle at top, rgba(60,60,60,0.5), rgba(10,10,10,0.85))"
+      : "radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(215,215,215,0.85))",
+  };
+  const gridStyle = {
+    backgroundImage: isDark
+      ? "repeating-linear-gradient(0deg, transparent 0 29px, rgba(255,255,255,0.08) 29px 30px), repeating-linear-gradient(90deg, transparent 0 29px, rgba(255,255,255,0.08) 29px 30px)"
+      : "repeating-linear-gradient(0deg, transparent 0 29px, rgba(96,96,96,0.22) 29px 30px), repeating-linear-gradient(90deg, transparent 0 29px, rgba(96,96,96,0.22) 29px 30px)",
+  };
+
   return (
     <div className="absolute inset-0">
       {/* base fill */}
-      <div className="absolute inset-0 bg-[#3a3a3a]" />
+      <div className="absolute inset-0" style={baseFillStyle} />
       {/* square grid using repeating-linear-gradient */}
       <div
         className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent 0 29px, rgba(0,0,0,0.4) 29px 30px),\n             repeating-linear-gradient(90deg, transparent 0 29px, rgba(0,0,0,0.4) 29px 30px)",
-        }}
+        style={gridStyle}
       />
+    </div>
+  );
+}
+
+function LandingIntro({ onReveal, isDark }: { onReveal: () => void; isDark: boolean }) {
+  const backgroundColor = isDark ? "#050505" : "#ffffff";
+  const labelTone = isDark ? "text-white/60" : "text-[#505050]/70";
+  const buttonPalette = isDark
+    ? "from-[#2f2f2f] via-[#3d3d3d] to-[#4b4b4b] text-white"
+    : "from-[#f0f0f0] via-[#e2e2e2] to-[#d4d4d4] text-[#1f1f1f]";
+
+  return (
+    <div
+      className="absolute inset-0 z-40 flex items-center justify-center"
+      style={{ backgroundColor }}
+    >
+      <div className="relative flex h-full w-full max-w-[960px] flex-col items-center justify-center px-6">
+        <div className="relative mb-12 flex h-64 w-full max-w-[420px] items-center justify-center">
+          <div
+            className="landing-map absolute inset-x-4 bottom-0 h-48 rounded-full"
+            style={{
+              backgroundImage: "url('/landing-map-grid.svg')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              filter: "grayscale(1) drop-shadow(0 14px 40px rgba(0,0,0,0.35))",
+              opacity: isDark ? 0.78 : 0.92,
+              pointerEvents: "none",
+            }}
+          />
+          <BeaconPin animated aria-hidden={true} />
+        </div>
+        <div className="flex flex-col items-center gap-5 text-center">
+          <div className={clsx("text-xs uppercase tracking-[0.42em]", labelTone)}>
+            drop safe. plan bold.
+          </div>
+          <button
+            type="button"
+            onClick={onReveal}
+            className={clsx(
+              "landing-enter-btn rounded-full px-12 py-3 text-sm font-semibold uppercase tracking-[0.32em] bg-gradient-to-r focus-visible:outline-none focus-visible:ring-4",
+              buttonPalette,
+              isDark
+                ? "border border-[#4d4d4d] shadow-[0_18px_45px_rgba(0,0,0,0.45)] focus-visible:ring-white/15"
+                : "border border-[#d4d4d4] shadow-[0_18px_45px_rgba(0,0,0,0.2)] focus-visible:ring-black/10"
+            )}
+          >
+            Enter
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

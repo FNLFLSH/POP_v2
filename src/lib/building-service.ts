@@ -6,7 +6,7 @@ export interface GeocodeResult {
   lat: number;
   lon: number;
   display_name: string;
-  address: any;
+  address: Record<string, unknown>;
 }
 
 export interface BuildingFootprint {

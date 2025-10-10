@@ -8,6 +8,12 @@ interface ComingSoonPageProps {
 }
 
 export default function ComingSoonPage({ title }: ComingSoonPageProps) {
+  const handleReturnHome = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("popSkipLanding", "true");
+    }
+  };
+
   return (
     <div className="h-screen w-screen bg-[#0e0e0e] text-white overflow-hidden">
       {/* Outer dotted paper backdrop */}
@@ -31,7 +37,11 @@ export default function ComingSoonPage({ title }: ComingSoonPageProps) {
             {/* Header */}
             <div className="relative p-6">
               {/* Back button - positioned absolutely */}
-              <Link href="/" className="absolute left-6 top-6 flex items-center space-x-2 hover:opacity-80 transition-opacity">
+              <Link
+                href="/"
+                onClick={handleReturnHome}
+                className="absolute left-6 top-6 flex items-center space-x-2 hover:opacity-80 transition-opacity"
+              >
                 <ArrowLeft className="h-5 w-5" />
                 <span>Back to Home</span>
               </Link>
@@ -47,7 +57,7 @@ export default function ComingSoonPage({ title }: ComingSoonPageProps) {
                 </h1>
                 <h2 className="text-4xl font-bold text-white mb-4">Coming Soon</h2>
                 <p className="text-xl text-gray-400 max-w-md">
-                  We're working hard to bring you {title.toLowerCase()}. 
+                  We&apos;re working hard to bring you {title.toLowerCase()}. 
                   Check back soon for updates!
                 </p>
               </div>

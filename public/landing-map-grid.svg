@@ -1,0 +1,45 @@
+<svg width="960" height="960" viewBox="0 0 960 960" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="960" fill="#080808"/>
+  <g opacity="0.35">
+    <path d="M0 60H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 120H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 180H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 240H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 300H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 360H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 420H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 480H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 540H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 600H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 660H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 720H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 780H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 840H960" stroke="#454545" stroke-width="1"/>
+    <path d="M0 900H960" stroke="#454545" stroke-width="1"/>
+    <path d="M60 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M120 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M180 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M240 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M300 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M360 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M420 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M480 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M540 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M600 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M660 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M720 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M780 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M840 0V960" stroke="#454545" stroke-width="1"/>
+    <path d="M900 0V960" stroke="#454545" stroke-width="1"/>
+  </g>
+  <g opacity="0.25">
+    <path d="M80 140L240 20L400 140L560 60L720 220L900 80" stroke="#cfcfcf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M120 700L220 580L380 720L520 540L700 720L840 600" stroke="#9a9a9a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="240" cy="20" r="12" fill="#bfbfbf"/>
+    <circle cx="560" cy="60" r="10" fill="#bfbfbf"/>
+    <circle cx="720" cy="220" r="12" fill="#bfbfbf"/>
+    <circle cx="220" cy="580" r="10" fill="#a0a0a0"/>
+    <circle cx="520" cy="540" r="12" fill="#a0a0a0"/>
+    <circle cx="700" cy="720" r="14" fill="#bfbfbf"/>
+  </g>
+</svg>

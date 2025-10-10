@@ -1,107 +1,106 @@
-# POP! Event Layout Manager
+# POP! Lite – Event Experience Builder
 
-A Figma-like event layout and workflow manager built with Next.js 14+, TypeScript, and modern UI components.
+Neon nightlife aesthetic, Next.js 15.5, and a blueprint-to-island flow that turns any address into a DesignLabz playground.
 
-## 🚀 Features
+- 🧭 Want the full narrative & sprint log? See `docs/POP-lite-progress.md`.
+- 🛠 Need to ship fast? Follow the quickstart + Supabase notes below.
 
-### Canvas Foundation
-- **Interactive Canvas**: Ready for Konva.js integration with smooth drag-and-drop
-- **Grid System**: Professional grid background for precise alignment
-- **Pan & Zoom**: Smooth canvas navigation controls
+---
 
-### Theme System
-- **Dark/Light Mode Toggle**: Dual-circle toggle design with instant switching
-- **SSR-Safe**: No hydration mismatches or flash of unstyled content
-- **Persistent Storage**: Remembers theme preference across sessions
+## 🔥 Core Experience
 
-### Full-Screen Interface
-- **Clean Homepage**: Centered search and layout controls
-- **Collapsible Sidebar**: Hidden by default, expands when needed
-- **Professional Navigation**: Working links to all sections
+1. **Neon Landing Drop** – Animated map pin crashes onto the grid, shaking the viewport and unveiling the POP! shell in lilac + black.  
+2. **Address Unlock** – Search input captures the venue address and deep-links to the blueprint portal with flow context.  
+3. **Venue Blueprint Portal** – 3D holobox render (with fallbacks) confirms coordinates, footprint type, and status before launch.  
+4. **DesignLabz Suite** – Carousel of unlocked venues + infinite “island” canvas + toolkit sidebar deliver the sandbox for layouts.
 
-### Navigation Pages
-- **Design Labs** (`/designlabs`)
-- **My Events** (`/myevents`)
-- **Marketplace** (`/marketplace`)
-- **Metrics** (`/metrics`)
-- **Settings** (`/settings`)
+> Each step is intentionally cinematic so founders, partners, and investors feel the POP! energy immediately.
+
+---
+
+## 🚀 Feature Breakdown
+
+- **Interactive Landing** – Timed reveal, pin drop, shake animation (`globals.css`).  
+- **Blueprint Holobox** – `src/components/visuals/VenueHolobox.tsx` turns footprint data into volumetric renders.  
+- **DesignLabz Carousel** – `src/app/designlabs/page.tsx` merges unlocked venues with “coming soon” islands and highlights the current location.  
+- **Infinite Island Canvas** – Procedurally grows as users explore; future modules will snap onto this grid.  
+- **Supabase-Powered Persistence** – `/api/venues` writes to Supabase if configured and gracefully falls back to an in-memory store when offline.  
+- **Global Neon Theme** – Purple/black palette applied across flows, with ThemeToggle still available via sidebar.
+
+---
 
 ## 🛠 Tech Stack
 
-- **Framework**: Next.js 14+ (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **UI Components**: shadcn/ui + Radix UI
-- **Theme Management**: Custom ThemeProvider Context
-- **Icons**: Lucide React
+- **Framework**: Next.js 15.5 (App Router)  
+- **Language**: TypeScript + modern React (app directory, client components where needed)  
+- **Styling**: Tailwind CSS + custom keyframes for cinematic moments  
+- **UI & Icons**: shadcn/ui primitives, Radix UI, Lucide React  
+- **State & Storage**: LocalStorage for quick flows, Supabase endpoint for shared venue library
 
-## 🏃‍♂️ Getting Started
+---
 
-1. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
+## ⚙️ Getting Started
 
-2. **Start Development Server**:
-   ```bash
-   npm run dev
-   ```
+```bash
+npm install
+npm run dev
+```
 
-3. **Open Browser**:
-   Navigate to [http://localhost:3000](http://localhost:3000)
+Visit `http://localhost:3000`, drop an address, unlock the blueprint, and press “Launch DesignLabz Suite”.
 
-## 🎯 How to Use
+### Supabase (optional but recommended)
 
-### Theme Toggle
-- Click the dual-circle toggle in the top-right corner
-- Watch the background switch between light (`#D9D9D9`) and dark (`black`)
-- Theme preference is automatically saved
+Create a table (default name `venues`) with:
 
-### Navigation
-- Click the hamburger menu to reveal the sidebar
-- Navigate to any section: Design Labs, My Events, Marketplace, Metrics, Settings
-- Each page shows a "Coming Soon" message with professional layout
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid (PK) | Use default `uuid_generate_v4()` |
+| `address` | text | Unique-ish, but no constraint needed yet |
+| `geocode` | jsonb | Raw payload from geocoding API |
+| `footprint` | jsonb | Geometry + metadata |
+| `created_at` | timestamptz | Default `now()` |
 
-### Canvas Preparation
-- The homepage includes search input for venue addresses
-- "Start Layout" button prepared for canvas integration
-- Grid background ready for future Konva.js implementation
+Set env vars:
 
-## 🏗 Project Structure
+- `SUPABASE_URL`  
+- `SUPABASE_ANON_KEY` (or `SUPABASE_SERVICE_ROLE_KEY` for writes)  
+- `SUPABASE_VENUE_TABLE` (optional override)
+
+No Supabase? The app will quietly use an in-memory array so demos never break.
+
+---
+
+## 🧭 Project Structure (Highlights)
 
 ```
 src/
-├── app/
-│   ├── designlabs/page.tsx      # Design Labs section
-│   ├── myevents/page.tsx        # My Events section  
-│   ├── marketplace/page.tsx     # Marketplace section
-│   ├── metrics/page.tsx         # Metrics section
-│   ├── settings/page.tsx        # Settings section
-│   ├── page.tsx                 # Homepage
-│   └── layout.tsx               # Root layout with theme provider
-├── components/
-│   ├── common/
-│   │   ├── ComingSoonPage.tsx   # Reusable coming soon page
-│   │   └── ThemeToggle.tsx      # Dual-circle theme toggle
-│   ├── home/
-│   │   └── PopHomeWithTheme.tsx # Main homepage component
-│   ├── providers/
-│   │   └── ThemeProvider.tsx    # Theme context provider
-│   └── ui/                      # shadcn/ui components
-└── lib/
-    └── utils.ts                 # Utility functions
+├─ app/
+│  ├─ page.tsx                # Landing experience
+│  ├─ blueprint/page.tsx      # Venue Blueprint Portal
+│  ├─ designlabs/page.tsx     # DesignLabz infinite canvas + toolkit
+│  └─ api/
+│     └─ venues/route.ts      # Supabase persistence with fallback
+├─ components/
+│  ├─ home/PopHomeDark.tsx    # Landing UI + search flow
+│  ├─ visuals/VenueHolobox.tsx# Shared 3D holobox renderer
+│  └─ providers/ThemeProvider.tsx
+└─ public/landing-map-grid.svg# Grid overlay for landing cinematic
 ```
 
-## 🔮 Next Steps
+---
 
-This MVP provides the foundation for the full Event Layout Manager:
+## 🔮 Roadmap Snapshot
 
-- **Canvas Integration**: Add Konva.js for drag-and-drop event elements
-- **Workflow Management**: Assign roles and tasks to elements
-- **Vendor Integration**: Vendor-specific views and management
-- **Sales Tracking**: POS-style tracking tied to elements
-- **Real-time Collaboration**: Multi-user editing capabilities
+- React-three-fiber or Konva scenes for actual floorplans.  
+- Draggable Design Labz Suite modules with Supabase persistence.  
+- Collaboration (auth, invites, shared links).  
+- Marketplace & Metrics vertical slices so the sidebar isn’t just aspirational.  
+- Storytelling collateral (Loom walkthrough, investor deck screens).
+
+For the sprint-by-sprint breakdown and next bets, check `docs/POP-lite-progress.md`.
+
+---
 
 ## 📝 License
 
-MIT License - see [GitHub Repository](https://github.com/FNLFLSH/POP_v2) for details.
+MIT License – see [GitHub Repository](https://github.com/FNLFLSH/POP_v2) for details.

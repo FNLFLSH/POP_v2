@@ -1,55 +1,47 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useThemeContext } from '@/components/providers/ThemeProvider';
 
 export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
+  const { theme, setTheme, mounted } = useThemeContext();
+  const [isPressed, setIsPressed] = useState(false);
+  const isDark = theme === 'dark';
 
   useEffect(() => {
-    // Check for saved theme preference or default to light mode
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
-    setIsDark(shouldBeDark);
-    document.documentElement.classList.toggle('dark', shouldBeDark);
-  }, []);
+    if (!mounted) return;
+    setIsPressed(false);
+  }, [mounted, theme]);
 
   const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    document.documentElement.classList.toggle('dark', newTheme);
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+    setIsPressed(true);
+    const nextTheme = isDark ? 'light' : 'dark';
+    setTheme(nextTheme);
   };
+
+  if (!mounted) {
+    return <div className="h-12 w-12" />;
+  }
 
   return (
     <button
+      type="button"
       onClick={toggleTheme}
-      className="h-10 w-10 flex items-center justify-center rounded-md border border-white/15 bg-[#1f1f1f] p-2 shadow hover:bg-[#2a2a2a] transition-colors"
       aria-label="Toggle theme"
+      aria-pressed={isDark}
+      className={`group relative h-12 w-12 rounded-full border border-[#cfcfcf] bg-gradient-to-br from-[#fbfbfb] to-[#d9d9d9] p-[3px] shadow-[0_0_18px_rgba(0,0,0,0.15)] transition-all duration-300 hover:shadow-[0_0_24px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 ${isPressed ? 'animate-pulse' : ''}`}
     >
-      {isDark ? (
-        // Sun icon for light mode
-        <svg
-          className="h-5 w-5 text-[#d9d9d9]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <circle cx="12" cy="12" r="5" />
-          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-        </svg>
-      ) : (
-        // Moon icon for dark mode
-        <svg
-          className="h-5 w-5 text-[#d9d9d9]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
-      )}
+      <div
+        className={`yin-toggle-face absolute inset-0 overflow-hidden rounded-full bg-[#1a1a1a] transition-transform duration-500 ease-out ${isDark ? 'rotate-180' : 'rotate-0'}`}
+      >
+        <div className="absolute inset-0 flex flex-col">
+          <div className="h-1/2 bg-[#f4f4f4]" />
+          <div className="h-1/2 bg-[#2a2a2a]" />
+        </div>
+        <div className="absolute left-1/2 top-[25%] h-[32%] w-[32%] -translate-x-1/2 rounded-full bg-[#2a2a2a] shadow-[0_0_10px_rgba(0,0,0,0.45)]" />
+        <div className="absolute left-1/2 bottom-[25%] h-[32%] w-[32%] -translate-x-1/2 rounded-full bg-[#f4f4f4] shadow-[0_0_10px_rgba(0,0,0,0.18)]" />
+      </div>
+      <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-transparent via-transparent to-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-60" />
     </button>
   );
 }

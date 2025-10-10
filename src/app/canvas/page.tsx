@@ -9,6 +9,11 @@ import { ArrowLeft } from 'lucide-react';
 
 export default function CanvasPage() {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const handleReturnHome = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('popSkipLanding', 'true');
+    }
+  };
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -24,12 +29,16 @@ export default function CanvasPage() {
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-[#f3f3f3] text-[#1f1f1f] dark:bg-[#0f0f0f] dark:text-[#f5f5f5] transition-colors">
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg">
+      <header className="bg-gradient-to-r from-[#1c1c1c] via-[#2a2a2a] to-[#3a3a3a] text-white p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+            <Link
+              href="/"
+              onClick={handleReturnHome}
+              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+            >
               <ArrowLeft className="h-5 w-5" />
               <span>Back to Home</span>
             </Link>
@@ -42,7 +51,7 @@ export default function CanvasPage() {
       </header>
 
       {/* Toolbar */}
-      <Toolbar />
+      <Toolbar selectedTool="select" onToolSelect={() => {}} />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
