@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Calendar, Clock, MapPin, Sparkles, Ticket } from "lucide-react";
+import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 
 const experiences = [
   {
@@ -31,6 +32,7 @@ const drops = [
 export default function UnlstdClonePage() {
   return (
     <main className="min-h-screen bg-[#050505] text-[#f4f4f4]">
+      <GlobalThemeToggle />
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-16 px-6 pb-24 pt-16 md:gap-20 md:px-10">
         <Hero />
         <DropTicker />

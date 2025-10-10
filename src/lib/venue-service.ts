@@ -51,7 +51,7 @@ export class VenueService {
   }
 
   // Get venue with caching - tries cache first, then API
-  static async getVenue(address: string): Promise<VenueData | null> {
+  static async getVenue(address: string, origin: string): Promise<VenueData | null> {
     // First, try to get from cache
     const cachedVenue = await this.getCachedVenue(address)
     if (cachedVenue) {
@@ -64,7 +64,9 @@ export class VenueService {
     
     try {
       // Step 1: Geocode the address
-      const geocodeResponse = await fetch('/api/geocode', {
+      const baseUrl = origin || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+      const geocodeResponse = await fetch(new URL('/api/geocode', baseUrl).toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address })
@@ -77,7 +79,7 @@ export class VenueService {
       const geocodeData = await geocodeResponse.json()
 
       // Step 2: Get building footprint
-      const footprintResponse = await fetch('/api/building-footprint', {
+      const footprintResponse = await fetch(new URL('/api/building-footprint', baseUrl).toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -111,5 +113,4 @@ export class VenueService {
     }
   }
 }
-
 

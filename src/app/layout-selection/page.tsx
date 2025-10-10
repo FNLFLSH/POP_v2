@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 
 export default function LayoutSelectionPage() {
   const layoutTemplates = [
@@ -20,6 +21,7 @@ export default function LayoutSelectionPage() {
 
   return (
     <div className="h-screen w-screen bg-[#1a1a1a] text-white overflow-hidden">
+      <GlobalThemeToggle />
       {/* Outer dotted paper backdrop */}
       <div className="relative h-full w-full">
         <DottedPaperBackdrop />

@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
     console.log('Fetching venue data for:', address);
 
     // Use the venue service with Supabase caching
-    const venueData = await VenueService.getVenue(address);
+    const origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const venueData = await VenueService.getVenue(address, origin);
     
     if (!venueData) {
       return NextResponse.json({ error: 'Failed to fetch venue data' }, { status: 500 });
@@ -30,5 +31,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch venue data' }, { status: 500 });
   }
 }
-
 

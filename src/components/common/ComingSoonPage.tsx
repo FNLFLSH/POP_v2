@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import GlobalThemeToggle from "./GlobalThemeToggle";
 
 interface ComingSoonPageProps {
   title: string;
@@ -16,6 +17,7 @@ export default function ComingSoonPage({ title }: ComingSoonPageProps) {
 
   return (
     <div className="h-screen w-screen bg-[#0e0e0e] text-white overflow-hidden">
+      <GlobalThemeToggle />
       {/* Outer dotted paper backdrop */}
       <div className="relative h-full w-full">
         <div

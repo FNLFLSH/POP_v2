@@ -7,6 +7,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FloorplanIsland } from "@/components/visuals/FloorplanIsland";
 import { BeaconPin } from "@/components/icons/BeaconPin";
+import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 
 type VenuePayload = {
   geocode: { lat: number; lon: number; display_name: string; address: string };
@@ -158,6 +159,7 @@ function VenueBlueprintContent() {
 
   return (
     <div className="h-screen w-screen bg-[#111111] text-white overflow-hidden">
+      <GlobalThemeToggle />
       <div className="relative h-full w-full">
         <DottedPaperBackdrop />
 

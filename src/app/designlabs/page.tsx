@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import {
   ArrowLeft,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { VenueHolobox } from "@/components/visuals/VenueHolobox";
+import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 
 type VenueRecord = {
   id: string;
@@ -53,6 +55,9 @@ function DesignLabsContent() {
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const [isCardExpanded, setIsCardExpanded] = useState<string | null>(null);
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [toolkitPosition, setToolkitPosition] = useState({ x: 24, y: 24 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const carouselRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const params = useSearchParams();
@@ -144,8 +149,90 @@ function DesignLabsContent() {
     });
   };
 
+  // Determine if toolkit should be horizontal or vertical based on position
+  const getToolkitOrientation = () => {
+    if (!workspaceRef.current) return 'vertical';
+    
+    const containerRect = workspaceRef.current.getBoundingClientRect();
+    const centerX = containerRect.width / 2;
+    const centerY = containerRect.height / 2;
+    
+    // If toolkit is positioned in top or bottom half, make it horizontal
+    if (toolkitPosition.y < centerY - 100 || toolkitPosition.y > centerY + 100) {
+      return 'horizontal';
+    }
+    // Otherwise, keep it vertical (left/right sides)
+    return 'vertical';
+  };
+
+  const handleToolkitMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - toolkitPosition.x,
+      y: e.clientY - toolkitPosition.y,
+    });
+  };
+
+  const handleToolkitMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    
+    // Constrain to workspace bounds
+    if (workspaceRef.current) {
+      const containerRect = workspaceRef.current.getBoundingClientRect();
+      const toolkitWidth = 256; // w-64 = 16rem = 256px
+      const toolkitHeight = getToolkitOrientation() === 'horizontal' ? 120 : 400;
+      
+      const constrainedX = Math.max(0, Math.min(newX, containerRect.width - toolkitWidth));
+      const constrainedY = Math.max(0, Math.min(newY, containerRect.height - toolkitHeight));
+      
+      setToolkitPosition({ x: constrainedX, y: constrainedY });
+    }
+  };
+
+  const handleToolkitMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Add global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      const handleGlobalMouseMove = (e: MouseEvent) => {
+        const newX = e.clientX - dragStart.x;
+        const newY = e.clientY - dragStart.y;
+        
+        if (workspaceRef.current) {
+          const containerRect = workspaceRef.current.getBoundingClientRect();
+          const toolkitWidth = 256;
+          const toolkitHeight = getToolkitOrientation() === 'horizontal' ? 120 : 400;
+          
+          const constrainedX = Math.max(0, Math.min(newX, containerRect.width - toolkitWidth));
+          const constrainedY = Math.max(0, Math.min(newY, containerRect.height - toolkitHeight));
+          
+          setToolkitPosition({ x: constrainedX, y: constrainedY });
+        }
+      };
+
+      const handleGlobalMouseUp = () => {
+        setIsDragging(false);
+      };
+
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [isDragging, dragStart, toolkitPosition]);
+
   return (
     <div className="h-screen w-screen bg-[#101010] text-white overflow-hidden">
+      <GlobalThemeToggle />
       <div className="relative h-full w-full">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),rgba(0,0,0,0.92))]" />
 
@@ -169,8 +256,14 @@ function DesignLabsContent() {
                 </Link>
                 <div className="flex flex-col items-center gap-4">
                   <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs uppercase tracking-[0.32em] text-white/70">
-                    <Compass className="h-3.5 w-3.5" />
-                    <span>DesignLabz island grid</span>
+                    <Image
+                      src="/lab-flask.svg"
+                      alt="DesignLabz"
+                      width={16}
+                      height={16}
+                      className="h-4 w-4"
+                    />
+                    <span>DesignLabz</span>
                   </div>
                   <h1 className="text-center text-[38px] sm:text-[52px] font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#ffffff] via-[#d4d4d4] to-[#9f9f9f] drop-shadow-[0_0_30px_rgba(200,200,200,0.4)]">
                     Build your next event
@@ -180,13 +273,6 @@ function DesignLabsContent() {
                     Additional islands drop soon—tap a card to highlight the space you want to remix.
                   </p>
                 </div>
-                <button
-                  onClick={toggleFullScreen}
-                  className="absolute right-8 top-9 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.32em] text-white/70 transition hover:bg-white/15"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                  Fullscreen
-                </button>
               </header>
             )}
 
@@ -260,6 +346,14 @@ function DesignLabsContent() {
                   isFullScreen ? "rounded-none border-white/5" : ""
                 }`}
               >
+                {/* Fullscreen toggle button positioned relative to the grid window */}
+                <button
+                  onClick={toggleFullScreen}
+                  className="pointer-events-auto absolute bottom-6 right-6 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 transition hover:bg-white/15 hover:text-white shadow-[0_0_20px_rgba(0,0,0,0.3)] backdrop-blur-sm"
+                  title={isFullScreen ? "Exit fullscreen" : "Enter fullscreen"}
+                >
+                  {isFullScreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+                </button>
                 <div
                   ref={workspaceRef}
                   className="absolute inset-0 overflow-auto"
@@ -302,6 +396,12 @@ function DesignLabsContent() {
                     <ToolkitPanel
                       isFullScreen={isFullScreen}
                       toggleFullScreen={toggleFullScreen}
+                      position={toolkitPosition}
+                      orientation={getToolkitOrientation()}
+                      isDragging={isDragging}
+                      onMouseDown={handleToolkitMouseDown}
+                      onMouseMove={handleToolkitMouseMove}
+                      onMouseUp={handleToolkitMouseUp}
                     />
                   </div>
                 </div>
@@ -322,32 +422,75 @@ function DesignLabsContent() {
   );
 }
 
-/** Dotted paper background (outside the main board) */
-function ToolkitPanel({ isFullScreen, toggleFullScreen }: { isFullScreen: boolean; toggleFullScreen: () => void }) {
+/** Draggable toolkit panel with dynamic orientation */
+function ToolkitPanel({ 
+  isFullScreen, 
+  toggleFullScreen, 
+  position, 
+  orientation, 
+  isDragging, 
+  onMouseDown, 
+  onMouseMove, 
+  onMouseUp 
+}: { 
+  isFullScreen: boolean; 
+  toggleFullScreen: () => void;
+  position: { x: number; y: number };
+  orientation: 'horizontal' | 'vertical';
+  isDragging: boolean;
+  onMouseDown: (e: React.MouseEvent) => void;
+  onMouseMove: (e: React.MouseEvent) => void;
+  onMouseUp: () => void;
+}) {
+  const isHorizontal = orientation === 'horizontal';
+  
   return (
-    <div className="pointer-events-auto absolute left-6 top-6 flex w-64 flex-col gap-3 rounded-3xl border border-white/10 bg-black/50 px-5 py-4 shadow-[0_0_30px_rgba(0,0,0,0.45)]">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.32em] text-white/70">
+    <div 
+      className={`pointer-events-auto absolute rounded-3xl border border-white/10 bg-black/50 px-5 py-4 shadow-[0_0_30px_rgba(0,0,0,0.45)] transition-all duration-300 ${
+        isDragging ? 'scale-105 shadow-[0_0_40px_rgba(0,0,0,0.6)]' : ''
+      } ${isHorizontal ? 'cursor-grab' : 'cursor-grab'} active:cursor-grabbing`}
+      style={{
+        left: position.x,
+        top: position.y,
+        width: isHorizontal ? 'auto' : '256px',
+        height: isHorizontal ? '120px' : 'auto',
+      }}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+    >
+      <div className={`flex items-center gap-2 text-xs uppercase tracking-[0.32em] text-white/70 ${
+        isHorizontal ? 'mb-3' : 'mb-3'
+      }`}>
         <Wand2 className="h-4 w-4" />
         <span>Toolkit islands</span>
       </div>
-      <ul className="space-y-2 text-xs">
-        {TOOLKIT.map((tool) => (
-          <li
-            key={tool.id}
-            className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-white/75 transition hover:border-white/20 hover:bg-white/10"
-          >
-            <div className="text-sm font-semibold text-white">{tool.label}</div>
-            <div className="text-[11px] uppercase tracking-[0.3em] text-white/40">{tool.hint}</div>
-          </li>
-        ))}
-      </ul>
-      <button
-        onClick={toggleFullScreen}
-        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.32em] text-white/70 transition hover:bg-white/15"
-      >
-        {isFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        {isFullScreen ? "Exit fullscreen" : "Fullscreen grid"}
-      </button>
+      
+      {isHorizontal ? (
+        <div className="flex gap-3 overflow-x-auto">
+          {TOOLKIT.map((tool) => (
+            <div
+              key={tool.id}
+              className="min-w-[140px] rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-white/75 transition hover:border-white/20 hover:bg-white/10"
+            >
+              <div className="text-sm font-semibold text-white">{tool.label}</div>
+              <div className="text-[11px] uppercase tracking-[0.3em] text-white/40">{tool.hint}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <ul className="space-y-2 text-xs">
+          {TOOLKIT.map((tool) => (
+            <li
+              key={tool.id}
+              className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-white/75 transition hover:border-white/20 hover:bg-white/10"
+            >
+              <div className="text-sm font-semibold text-white">{tool.label}</div>
+              <div className="text-[11px] uppercase tracking-[0.3em] text-white/40">{tool.hint}</div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

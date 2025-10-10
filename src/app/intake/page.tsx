@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Send } from 'lucide-react';
+import GlobalThemeToggle from '@/components/common/GlobalThemeToggle';
 
 type IntakeAnswer = {
   id: string;
@@ -82,6 +83,7 @@ export default function IntakePage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0f0f0f] text-[#f5f5f5]">
+      <GlobalThemeToggle />
       <header className="border-b border-white/10 px-6 py-5">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
           <Link

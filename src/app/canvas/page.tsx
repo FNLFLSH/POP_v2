@@ -6,6 +6,7 @@ import Toolbar from '@/components/canvas/Toolbar';
 import PropertiesPanel from '@/components/canvas/PropertiesPanel';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import GlobalThemeToggle from '@/components/common/GlobalThemeToggle';
 
 export default function CanvasPage() {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -30,6 +31,7 @@ export default function CanvasPage() {
 
   return (
     <div className="h-screen flex flex-col bg-[#f3f3f3] text-[#1f1f1f] dark:bg-[#0f0f0f] dark:text-[#f5f5f5] transition-colors">
+      <GlobalThemeToggle />
       {/* Header */}
       <header className="bg-gradient-to-r from-[#1c1c1c] via-[#2a2a2a] to-[#3a3a3a] text-white p-4 shadow-lg">
         <div className="flex items-center justify-between">

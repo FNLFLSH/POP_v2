@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, FormEvent, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
+import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { useThemeContext } from '@/components/providers/ThemeProvider';
 import { BeaconPin } from '@/components/icons/BeaconPin';
@@ -28,6 +29,8 @@ export default function PopHomeWithTheme() {
   const { theme } = useThemeContext();
   const isDarkTheme = theme === 'dark';
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -43,11 +46,43 @@ export default function PopHomeWithTheme() {
     };
   }, []);
 
-  const handleStartLayout = () => {
-    if (address.trim()) {
-      localStorage.setItem('venueAddress', address.trim());
-      router.push(`/blueprint?address=${encodeURIComponent(address.trim())}&flow=search`);
+  const sanitizedAddress = useMemo(() => address.trim(), [address]);
+
+  const validateAndNavigate = async () => {
+    if (!sanitizedAddress) {
+      setAddressError("Enter an address");
+      inputRef.current?.focus();
+      return;
     }
+
+    try {
+      setValidating(true);
+      setAddressError(null);
+
+      const response = await fetch("/api/venue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: sanitizedAddress }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Invalid address");
+      }
+
+      localStorage.setItem('venueAddress', sanitizedAddress);
+      router.push(`/blueprint?address=${encodeURIComponent(sanitizedAddress)}&flow=search`);
+    } catch (error) {
+      console.error("Address validation failed", error);
+      setAddressError("We couldn't locate that venue. Try refining the address.");
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (validating) return;
+    await validateAndNavigate();
   };
 
   const handleLandingReveal = () => {
@@ -95,12 +130,6 @@ export default function PopHomeWithTheme() {
     ? "border-[#3a3a3a] bg-[#1b1b1b]"
     : "border-[#d1d1d1] bg-white/85";
 
-  const ctaButtonClass = clsx(
-    "w-[240px] rounded-lg border px-4 py-2 text-sm font-semibold shadow-[0_0_24px_rgba(0,0,0,0.25)] transition-all hover:scale-[1.02]",
-    isDarkTheme
-      ? "border-white bg-black text-white hover:bg-white hover:text-black hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]"
-      : "border-[#b6b6b6] bg-gradient-to-r from-[#f5f5f5] via-[#e8e8e8] to-[#d9d9d9] text-[#1f1f1f] hover:shadow-[0_0_28px_rgba(0,0,0,0.2)]"
-  );
   const taglineClass = isDarkTheme ? "text-white/60" : "text-[#4a4a4a]/70";
   const exploreLinkClass = isDarkTheme
     ? "text-xs uppercase tracking-[0.35em] text-[#bdbdbd] hover:text-white transition-colors"
@@ -154,22 +183,51 @@ export default function PopHomeWithTheme() {
                   <p className={clsx("text-center text-sm uppercase tracking-[0.25em]", taglineClass)}>
                     drop an address, unlock the night
                   </p>
-                  <div className={clsx("w-full rounded-xl p-2 backdrop-blur-md shadow-[0_0_24px_rgba(0,0,0,0.18)]", cardBorderClass)}>
-                    <input
-                      className={inputClassName}
-                      placeholder="ENTER ADDRESS"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      ref={inputRef}
-                    />
-                  </div>
-                  <button
-                    onClick={handleStartLayout}
-                    className={clsx(ctaButtonClass, !address.trim() && "opacity-40 cursor-not-allowed")}
-                    disabled={!address.trim()}
+                  <form
+                    onSubmit={handleSubmit}
+                    className={clsx(
+                      "w-full rounded-xl border p-2 backdrop-blur-md shadow-[0_0_24px_rgba(0,0,0,0.18)]",
+                      cardBorderClass,
+                      addressError ? "border-red-500/60" : ""
+                    )}
                   >
-                    render venue portal
-                  </button>
+                    <div className="relative flex items-center">
+                      <input
+                        className={clsx(
+                          inputClassName,
+                          "pr-12",
+                          addressError ? "border-red-500/60 focus:border-red-400 focus:ring-red-400/30" : ""
+                        )}
+                        placeholder="ENTER ADDRESS"
+                        value={address}
+                        onChange={(e) => {
+                          setAddress(e.target.value);
+                          if (addressError) {
+                            setAddressError(null);
+                          }
+                        }}
+                        ref={inputRef}
+                      />
+                      <button
+                        type="submit"
+                        className="absolute right-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:cursor-not-allowed"
+                        aria-label="Search address"
+                        disabled={validating}
+                      >
+                        {validating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ArrowRight className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                  {addressError && (
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-red-400">
+                      <AlertCircle className="h-4 w-4" />
+                      {addressError}
+                    </div>
+                  )}
                   <Link href="/intake" className={exploreLinkClass}>
                     need help finding your venue?
                   </Link>
