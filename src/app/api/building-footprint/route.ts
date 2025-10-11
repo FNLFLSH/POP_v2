@@ -10,9 +10,10 @@ export async function POST(request: NextRequest) {
 
     // Fetch building footprint from Overpass API
     const footprint = await getBuildingFootprint(lat, lon);
-    
+
     if (!footprint) {
-      return NextResponse.json({ error: 'No building footprint found' }, { status: 404 });
+      console.log('No footprint detected, returning synthesized outline');
+      return NextResponse.json(createMockFootprint(lat, lon));
     }
 
     return NextResponse.json(footprint);
@@ -106,44 +107,32 @@ async function getBuildingFootprint(lat: number, lon: number) {
       }
     }
     
-    // Fallback: Create a realistic building footprint based on location
-    console.log('No building found, creating realistic footprint');
-    const mockSize = 0.0005; // ~50m - more realistic size
-    return {
-      coordinates: [
-        [lon - mockSize, lat - mockSize],
-        [lon + mockSize, lat - mockSize],
-        [lon + mockSize, lat + mockSize],
-        [lon - mockSize, lat + mockSize],
-        [lon - mockSize, lat - mockSize]
-      ],
-      type: 'polygon',
-      properties: {
-        id: 'mock-building',
-        building_type: 'venue',
-        name: 'Venue Layout',
-        distance: 0
-      }
-    };
+    console.log('No precise building returned by Overpass');
+    return null;
   } catch (error) {
     console.error('Building footprint error:', error);
-    // Return mock data on error
-    const mockSize = 0.0005;
-    return {
-      coordinates: [
-        [lon - mockSize, lat - mockSize],
-        [lon + mockSize, lat - mockSize],
-        [lon + mockSize, lat + mockSize],
-        [lon - mockSize, lat + mockSize],
-        [lon - mockSize, lat - mockSize]
-      ],
-      type: 'polygon',
-      properties: {
-        id: 'error-fallback',
-        building_type: 'venue',
-        name: 'Venue Layout',
-        distance: 0
-      }
-    };
+    return null;
   }
+}
+
+function createMockFootprint(lat: number, lon: number) {
+  const sizeLat = 0.00035; // ~40m
+  const sizeLon = 0.00045; // ~45m
+
+  return {
+    coordinates: [
+      [lon - sizeLon, lat - sizeLat],
+      [lon + sizeLon, lat - sizeLat],
+      [lon + sizeLon, lat + sizeLat],
+      [lon - sizeLon, lat + sizeLat],
+      [lon - sizeLon, lat - sizeLat],
+    ],
+    type: 'polygon',
+    properties: {
+      id: 'synthetic-building',
+      building_type: 'venue',
+      name: 'Synthesized Footprint',
+      distance: 0,
+    },
+  };
 }

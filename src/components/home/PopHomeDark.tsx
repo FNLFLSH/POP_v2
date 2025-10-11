@@ -5,10 +5,14 @@ import Image from "next/image";
 import { useEffect, useRef, useState, FormEvent, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, PackageOpen, Search } from "lucide-react";
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { useThemeContext } from '@/components/providers/ThemeProvider';
 import { BeaconPin } from '@/components/icons/BeaconPin';
+import { generateMockLayout, type GeneratedLayout } from "@/lib/layoutEngine";
+import { GeneratedLayoutPreview } from "@/components/floorplan/GeneratedLayoutPreview";
+
+type LayoutStatus = "idle" | "generating" | "revealing" | "ready" | "packing";
 
 /**
  * POP! Home – Dark Mode (full screen, no circles)
@@ -31,6 +35,24 @@ export default function PopHomeWithTheme() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [validating, setValidating] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
+  const [layoutStatus, setLayoutStatus] = useState<LayoutStatus>("idle");
+  const [generatedLayout, setGeneratedLayout] = useState<GeneratedLayout | null>(null);
+  const [confirmedAddress, setConfirmedAddress] = useState<string | null>(null);
+  const layoutTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearLayoutTimers = () => {
+    if (layoutTimersRef.current.length === 0) return;
+    layoutTimersRef.current.forEach((timerId) => clearTimeout(timerId));
+    layoutTimersRef.current = [];
+  };
+
+  const scheduleLayoutStatus = (status: LayoutStatus, delay: number) => {
+    const timerId = setTimeout(() => {
+      setLayoutStatus(status);
+      layoutTimersRef.current = layoutTimersRef.current.filter((existing) => existing !== timerId);
+    }, delay);
+    layoutTimersRef.current.push(timerId);
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -43,12 +65,13 @@ export default function PopHomeWithTheme() {
       if (shakeTimeoutRef.current) {
         clearTimeout(shakeTimeoutRef.current);
       }
+      clearLayoutTimers();
     };
   }, []);
 
   const sanitizedAddress = useMemo(() => address.trim(), [address]);
 
-  const validateAndNavigate = async () => {
+  const runSearchFlow = async () => {
     if (!sanitizedAddress) {
       setAddressError("Enter an address");
       inputRef.current?.focus();
@@ -56,8 +79,13 @@ export default function PopHomeWithTheme() {
     }
 
     try {
+      clearLayoutTimers();
+      setLayoutStatus("idle");
       setValidating(true);
       setAddressError(null);
+      const nextLayout = generateMockLayout(sanitizedAddress);
+      setGeneratedLayout(nextLayout);
+      setLayoutStatus("generating");
 
       const response = await fetch("/api/venue", {
         method: "POST",
@@ -69,11 +97,19 @@ export default function PopHomeWithTheme() {
         throw new Error("Invalid address");
       }
 
-      localStorage.setItem('venueAddress', sanitizedAddress);
-      router.push(`/blueprint?address=${encodeURIComponent(sanitizedAddress)}&flow=search`);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("venueAddress", sanitizedAddress);
+      }
+
+      setConfirmedAddress(sanitizedAddress);
+      scheduleLayoutStatus("revealing", 90);
+      scheduleLayoutStatus("ready", 760);
     } catch (error) {
       console.error("Address validation failed", error);
       setAddressError("We couldn't locate that venue. Try refining the address.");
+      setGeneratedLayout(null);
+      setConfirmedAddress(null);
+      setLayoutStatus("idle");
     } finally {
       setValidating(false);
     }
@@ -82,7 +118,7 @@ export default function PopHomeWithTheme() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (validating) return;
-    await validateAndNavigate();
+    await runSearchFlow();
   };
 
   const handleLandingReveal = () => {
@@ -108,6 +144,41 @@ export default function PopHomeWithTheme() {
     }
   };
 
+  const handleBoxClick = () => {
+    if (!generatedLayout || layoutStatus !== "ready" || !confirmedAddress) {
+      return;
+    }
+
+    clearLayoutTimers();
+    setLayoutStatus("packing");
+
+    if (typeof window !== "undefined") {
+      try {
+        const payload = {
+          layout: generatedLayout,
+          address: confirmedAddress,
+          theme,
+          timestamp: Date.now(),
+        };
+        sessionStorage.setItem("popGeneratedLayout", JSON.stringify(payload));
+        sessionStorage.setItem("popSkipLanding", "true");
+      } catch (error) {
+        console.error("Unable to cache generated layout", error);
+      }
+    }
+
+    const navigationTimer = setTimeout(() => {
+      router.push(
+        `/designlabs?prefillLayout=1&address=${encodeURIComponent(confirmedAddress)}`
+      );
+      layoutTimersRef.current = layoutTimersRef.current.filter(
+        (timerRef) => timerRef !== navigationTimer
+      );
+    }, 720);
+
+    layoutTimersRef.current.push(navigationTimer);
+  };
+
   const boardClassName = clsx(
     "h-full shadow-[0_0_32px_rgba(0,0,0,0.35)] transition-transform duration-500",
     isDarkTheme ? "bg-[#111111]" : "bg-[#fcfcfc]",
@@ -125,6 +196,21 @@ export default function PopHomeWithTheme() {
       ? "border-[#3a3a3a] bg-[#1a1a1a] text-[#f2f2f2] placeholder-[#9a9a9a] focus:border-[#4c4c4c] focus:ring-2 focus:ring-[#4c4c4c]/40"
       : "border-[#c9c9c9] bg-white text-[#1f1f1f] placeholder-[#7a7a7a] focus:border-[#a8a8a8] focus:ring-2 focus:ring-[#a8a8a8]/40"
   );
+
+  const enterButtonClassName = clsx(
+    "relative inline-flex h-11 min-w-[112px] items-center justify-center rounded-lg border px-6 text-[11px] font-semibold uppercase tracking-[0.32em] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed",
+    isDarkTheme
+      ? "border-white/20 bg-black text-white shadow-[0_14px_32px_rgba(0,0,0,0.55)] hover:border-white/30 hover:bg-black/85 focus-visible:ring-white/30"
+      : "border-black/15 bg-white text-[#111111] shadow-[0_16px_34px_rgba(0,0,0,0.14)] hover:border-black/25 hover:bg-white/95 focus-visible:ring-black/20",
+    (validating || layoutStatus === "packing") && "opacity-80"
+  );
+  const showLayoutPreview = Boolean(generatedLayout && layoutStatus !== "idle");
+  const displaySpinner = validating || layoutStatus === "generating";
+  const previewLayout = showLayoutPreview ? generatedLayout : null;
+  const previewStatus: "generating" | "revealing" | "ready" | "packing" =
+    layoutStatus === "generating" || layoutStatus === "revealing" || layoutStatus === "packing"
+      ? (layoutStatus as "generating" | "revealing" | "packing")
+      : "ready";
 
   const cardBorderClass = isDarkTheme
     ? "border-[#3a3a3a] bg-[#1b1b1b]"
@@ -191,41 +277,103 @@ export default function PopHomeWithTheme() {
                       addressError ? "border-red-500/60" : ""
                     )}
                   >
-                    <div className="relative flex items-center">
-                      <input
-                        className={clsx(
-                          inputClassName,
-                          "pr-12",
-                          addressError ? "border-red-500/60 focus:border-red-400 focus:ring-red-400/30" : ""
-                        )}
-                        placeholder="ENTER ADDRESS"
-                        value={address}
-                        onChange={(e) => {
-                          setAddress(e.target.value);
-                          if (addressError) {
-                            setAddressError(null);
-                          }
-                        }}
-                        ref={inputRef}
-                      />
-                      <button
-                        type="submit"
-                        className="absolute right-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:cursor-not-allowed"
-                        aria-label="Search address"
-                        disabled={validating}
-                      >
-                        {validating ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ArrowRight className="h-4 w-4" />
-                        )}
-                      </button>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                        <div className="relative flex-1">
+                          <input
+                            className={clsx(
+                              inputClassName,
+                              "pr-12", // Add padding for the icon
+                              addressError ? "border-red-500/60 focus:border-red-400 focus:ring-red-400/30" : ""
+                            )}
+                            placeholder="ENTER ADDRESS"
+                            value={address}
+                            onChange={(e) => {
+                              setAddress(e.target.value);
+                              if (addressError) {
+                                setAddressError(null);
+                              }
+                            }}
+                            ref={inputRef}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                runSearchFlow();
+                              }
+                            }}
+                          />
+                          <button
+                            type="submit"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                            aria-label="Search address"
+                            disabled={validating || layoutStatus === "packing"}
+                          >
+                            {displaySpinner ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-white" />
+                            ) : (
+                              <Search className="h-4 w-4 text-white" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </form>
                   {addressError && (
                     <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-red-400">
                       <AlertCircle className="h-4 w-4" />
                       {addressError}
+                    </div>
+                  )}
+                  {previewLayout && (
+                    <div className="relative flex w-full flex-col items-center gap-5 pt-4">
+                      <div
+                        className={clsx(
+                          "pointer-events-none absolute inset-0 -z-10 rounded-[36px] transition-all duration-700",
+                          layoutStatus === "revealing"
+                            ? isDarkTheme
+                              ? "opacity-80 bg-white/10 blur-2xl"
+                              : "opacity-75 bg-black/10 blur-2xl"
+                            : "opacity-0"
+                        )}
+                      />
+                      <GeneratedLayoutPreview
+                        layout={previewLayout}
+                        theme={isDarkTheme ? "dark" : "light"}
+                        status={previewStatus}
+                      />
+                      <div className="flex flex-col items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleBoxClick}
+                          className={clsx(
+                            "group relative flex h-16 w-16 items-center justify-center rounded-2xl border transition-all duration-500 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
+                            isDarkTheme
+                              ? "border-white/20 bg-black/70 text-white/80 hover:bg-black/60 hover:text-white focus-visible:ring-white/30"
+                              : "border-black/15 bg-white text-[#1a1a1a] hover:bg-white/85 focus-visible:ring-black/20",
+                            layoutStatus === "packing" && "box-launch"
+                          )}
+                          disabled={layoutStatus !== "ready" || !confirmedAddress}
+                          aria-label="Send generated layout to Design Lab"
+                        >
+                          <PackageOpen
+                            className={clsx(
+                              "h-8 w-8 transition-transform duration-500",
+                              layoutStatus === "ready"
+                                ? "group-hover:-translate-y-1 group-hover:scale-110"
+                                : "",
+                              layoutStatus === "packing" ? "translate-y-3 scale-50 opacity-0" : ""
+                            )}
+                          />
+                        </button>
+                        <span
+                          className={clsx(
+                            "text-[10px] uppercase tracking-[0.36em] transition-colors duration-500",
+                            isDarkTheme ? "text-white/60" : "text-[#1a1a1a]/60"
+                          )}
+                        >
+                          send to design lab
+                        </span>
+                      </div>
                     </div>
                   )}
                   <Link href="/intake" className={exploreLinkClass}>

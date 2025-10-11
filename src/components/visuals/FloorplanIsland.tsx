@@ -15,8 +15,7 @@ type FloorplanIslandProps = {
 
 export function FloorplanIsland({ footprint, address, status, loading, error }: FloorplanIslandProps) {
   const coordinates = footprint?.coordinates ?? [];
-
-  const { path, centroid } = buildPath(coordinates);
+  const { path, centroid, svgCoords } = buildPath(coordinates);
 
   return (
     <div className="relative isolate flex w-full flex-col items-center gap-6 rounded-[32px] border border-white/10 bg-gradient-to-br from-white/5 via-black/20 to-black/30 p-8 shadow-[0_0_50px_rgba(0,0,0,0.35)]">
@@ -59,6 +58,18 @@ export function FloorplanIsland({ footprint, address, status, loading, error }: 
                     strokeWidth="1.6"
                   />
                   <circle cx={centroid.x} cy={centroid.y} r={2} fill="#ffffff" opacity={0.65} />
+                  {svgCoords.map(([x, y], index) => (
+                    <rect
+                      key={`${x}-${y}-${index}`}
+                      x={x - 1.5}
+                      y={y - 1.5}
+                      width={3}
+                      height={3}
+                      rx={0.8}
+                      fill="#ffffff"
+                      opacity={0.45}
+                    />
+                  ))}
                 </g>
               ) : (
                 <g>
@@ -94,6 +105,7 @@ function buildPath(coordinates: Coordinate[]) {
     return {
       path: "",
       centroid: { x: 50, y: 50, latLonLabel: "n/a" },
+      svgCoords: [] as [number, number][],
     };
   }
 
@@ -108,11 +120,13 @@ function buildPath(coordinates: Coordinate[]) {
   const latRange = maxLat - minLat || 1;
   const lonRange = maxLon - minLon || 1;
 
-  const points = coordinates.map(([lon, lat]) => {
+  const svgCoords = coordinates.map(([lon, lat]) => {
     const x = ((lon - minLon) / lonRange) * 60 + 20;
     const y = 80 - ((lat - minLat) / latRange) * 60;
-    return `${x.toFixed(2)},${y.toFixed(2)}`;
+    return [parseFloat(x.toFixed(2)), parseFloat(y.toFixed(2))] as [number, number];
   });
+
+  const points = svgCoords.map(([x, y]) => `${x},${y}`);
 
   const path = `M ${points.join(" L ")} Z`;
 
@@ -134,5 +148,6 @@ function buildPath(coordinates: Coordinate[]) {
       y: centroidY,
       latLonLabel: `${centroidLat.toFixed(3)}, ${centroidLon.toFixed(3)}`,
     },
+    svgCoords,
   };
 }
