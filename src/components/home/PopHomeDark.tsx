@@ -5,14 +5,11 @@ import Image from "next/image";
 import { useEffect, useRef, useState, FormEvent, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { AlertCircle, Loader2, PackageOpen, Search } from "lucide-react";
+import { AlertCircle, Loader2, Search } from "lucide-react";
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { useThemeContext } from '@/components/providers/ThemeProvider';
 import { BeaconPin } from '@/components/icons/BeaconPin';
-import { generateMockLayout, type GeneratedLayout } from "@/lib/layoutEngine";
-import { GeneratedLayoutPreview } from "@/components/floorplan/GeneratedLayoutPreview";
-
-type LayoutStatus = "idle" | "generating" | "revealing" | "ready" | "packing";
+import { DottedPaperBackdrop, InnerGrid, NavItem } from "./HomeChrome";
 
 /**
  * POP! Home – Dark Mode (full screen, no circles)
@@ -35,24 +32,6 @@ export default function PopHomeWithTheme() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [validating, setValidating] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
-  const [layoutStatus, setLayoutStatus] = useState<LayoutStatus>("idle");
-  const [generatedLayout, setGeneratedLayout] = useState<GeneratedLayout | null>(null);
-  const [confirmedAddress, setConfirmedAddress] = useState<string | null>(null);
-  const layoutTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  const clearLayoutTimers = () => {
-    if (layoutTimersRef.current.length === 0) return;
-    layoutTimersRef.current.forEach((timerId) => clearTimeout(timerId));
-    layoutTimersRef.current = [];
-  };
-
-  const scheduleLayoutStatus = (status: LayoutStatus, delay: number) => {
-    const timerId = setTimeout(() => {
-      setLayoutStatus(status);
-      layoutTimersRef.current = layoutTimersRef.current.filter((existing) => existing !== timerId);
-    }, delay);
-    layoutTimersRef.current.push(timerId);
-  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -65,7 +44,6 @@ export default function PopHomeWithTheme() {
       if (shakeTimeoutRef.current) {
         clearTimeout(shakeTimeoutRef.current);
       }
-      clearLayoutTimers();
     };
   }, []);
 
@@ -79,13 +57,8 @@ export default function PopHomeWithTheme() {
     }
 
     try {
-      clearLayoutTimers();
-      setLayoutStatus("idle");
       setValidating(true);
       setAddressError(null);
-      const nextLayout = generateMockLayout(sanitizedAddress);
-      setGeneratedLayout(nextLayout);
-      setLayoutStatus("generating");
 
       const response = await fetch("/api/venue", {
         method: "POST",
@@ -99,17 +72,13 @@ export default function PopHomeWithTheme() {
 
       if (typeof window !== "undefined") {
         localStorage.setItem("venueAddress", sanitizedAddress);
+        sessionStorage.setItem("popSkipLanding", "true");
       }
 
-      setConfirmedAddress(sanitizedAddress);
-      scheduleLayoutStatus("revealing", 90);
-      scheduleLayoutStatus("ready", 760);
+      router.push(`/layout-preview?address=${encodeURIComponent(sanitizedAddress)}`);
     } catch (error) {
       console.error("Address validation failed", error);
       setAddressError("We couldn't locate that venue. Try refining the address.");
-      setGeneratedLayout(null);
-      setConfirmedAddress(null);
-      setLayoutStatus("idle");
     } finally {
       setValidating(false);
     }
@@ -144,41 +113,6 @@ export default function PopHomeWithTheme() {
     }
   };
 
-  const handleBoxClick = () => {
-    if (!generatedLayout || layoutStatus !== "ready" || !confirmedAddress) {
-      return;
-    }
-
-    clearLayoutTimers();
-    setLayoutStatus("packing");
-
-    if (typeof window !== "undefined") {
-      try {
-        const payload = {
-          layout: generatedLayout,
-          address: confirmedAddress,
-          theme,
-          timestamp: Date.now(),
-        };
-        sessionStorage.setItem("popGeneratedLayout", JSON.stringify(payload));
-        sessionStorage.setItem("popSkipLanding", "true");
-      } catch (error) {
-        console.error("Unable to cache generated layout", error);
-      }
-    }
-
-    const navigationTimer = setTimeout(() => {
-      router.push(
-        `/designlabs?prefillLayout=1&address=${encodeURIComponent(confirmedAddress)}`
-      );
-      layoutTimersRef.current = layoutTimersRef.current.filter(
-        (timerRef) => timerRef !== navigationTimer
-      );
-    }, 720);
-
-    layoutTimersRef.current.push(navigationTimer);
-  };
-
   const boardClassName = clsx(
     "h-full shadow-[0_0_32px_rgba(0,0,0,0.35)] transition-transform duration-500",
     isDarkTheme ? "bg-[#111111]" : "bg-[#fcfcfc]",
@@ -197,20 +131,7 @@ export default function PopHomeWithTheme() {
       : "border-[#c9c9c9] bg-white text-[#1f1f1f] placeholder-[#7a7a7a] focus:border-[#a8a8a8] focus:ring-2 focus:ring-[#a8a8a8]/40"
   );
 
-  const enterButtonClassName = clsx(
-    "relative inline-flex h-11 min-w-[112px] items-center justify-center rounded-lg border px-6 text-[11px] font-semibold uppercase tracking-[0.32em] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 disabled:cursor-not-allowed",
-    isDarkTheme
-      ? "border-white/20 bg-black text-white shadow-[0_14px_32px_rgba(0,0,0,0.55)] hover:border-white/30 hover:bg-black/85 focus-visible:ring-white/30"
-      : "border-black/15 bg-white text-[#111111] shadow-[0_16px_34px_rgba(0,0,0,0.14)] hover:border-black/25 hover:bg-white/95 focus-visible:ring-black/20",
-    (validating || layoutStatus === "packing") && "opacity-80"
-  );
-  const showLayoutPreview = Boolean(generatedLayout && layoutStatus !== "idle");
-  const displaySpinner = validating || layoutStatus === "generating";
-  const previewLayout = showLayoutPreview ? generatedLayout : null;
-  const previewStatus: "generating" | "revealing" | "ready" | "packing" =
-    layoutStatus === "generating" || layoutStatus === "revealing" || layoutStatus === "packing"
-      ? (layoutStatus as "generating" | "revealing" | "packing")
-      : "ready";
+  const displaySpinner = validating;
 
   const cardBorderClass = isDarkTheme
     ? "border-[#3a3a3a] bg-[#1b1b1b]"
@@ -284,7 +205,8 @@ export default function PopHomeWithTheme() {
                             className={clsx(
                               inputClassName,
                               "pr-12", // Add padding for the icon
-                              addressError ? "border-red-500/60 focus:border-red-400 focus:ring-red-400/30" : ""
+                              addressError ? "border-red-500/60 focus:border-red-400 focus:ring-red-400/30" : "",
+                              validating ? "opacity-70 cursor-wait" : ""
                             )}
                             placeholder="ENTER ADDRESS"
                             value={address}
@@ -295,8 +217,9 @@ export default function PopHomeWithTheme() {
                               }
                             }}
                             ref={inputRef}
+                            disabled={validating}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
+                              if (e.key === 'Enter' && !validating && sanitizedAddress) {
                                 e.preventDefault();
                                 runSearchFlow();
                               }
@@ -304,9 +227,15 @@ export default function PopHomeWithTheme() {
                           />
                           <button
                             type="submit"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                            onClick={runSearchFlow}
+                            className={clsx(
+                              "absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300",
+                              validating
+                                ? "bg-white/30 cursor-not-allowed"
+                                : "bg-white/20 hover:bg-white/30 hover:scale-105 active:scale-95"
+                            )}
                             aria-label="Search address"
-                            disabled={validating || layoutStatus === "packing"}
+                            disabled={validating || !sanitizedAddress}
                           >
                             {displaySpinner ? (
                               <Loader2 className="h-4 w-4 animate-spin text-white" />
@@ -318,62 +247,16 @@ export default function PopHomeWithTheme() {
                       </div>
                     </div>
                   </form>
+                  {validating && (
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/70">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Locating venue...</span>
+                    </div>
+                  )}
                   {addressError && (
                     <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-red-400">
                       <AlertCircle className="h-4 w-4" />
                       {addressError}
-                    </div>
-                  )}
-                  {previewLayout && (
-                    <div className="relative flex w-full flex-col items-center gap-5 pt-4">
-                      <div
-                        className={clsx(
-                          "pointer-events-none absolute inset-0 -z-10 rounded-[36px] transition-all duration-700",
-                          layoutStatus === "revealing"
-                            ? isDarkTheme
-                              ? "opacity-80 bg-white/10 blur-2xl"
-                              : "opacity-75 bg-black/10 blur-2xl"
-                            : "opacity-0"
-                        )}
-                      />
-                      <GeneratedLayoutPreview
-                        layout={previewLayout}
-                        theme={isDarkTheme ? "dark" : "light"}
-                        status={previewStatus}
-                      />
-                      <div className="flex flex-col items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleBoxClick}
-                          className={clsx(
-                            "group relative flex h-16 w-16 items-center justify-center rounded-2xl border transition-all duration-500 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
-                            isDarkTheme
-                              ? "border-white/20 bg-black/70 text-white/80 hover:bg-black/60 hover:text-white focus-visible:ring-white/30"
-                              : "border-black/15 bg-white text-[#1a1a1a] hover:bg-white/85 focus-visible:ring-black/20",
-                            layoutStatus === "packing" && "box-launch"
-                          )}
-                          disabled={layoutStatus !== "ready" || !confirmedAddress}
-                          aria-label="Send generated layout to Design Lab"
-                        >
-                          <PackageOpen
-                            className={clsx(
-                              "h-8 w-8 transition-transform duration-500",
-                              layoutStatus === "ready"
-                                ? "group-hover:-translate-y-1 group-hover:scale-110"
-                                : "",
-                              layoutStatus === "packing" ? "translate-y-3 scale-50 opacity-0" : ""
-                            )}
-                          />
-                        </button>
-                        <span
-                          className={clsx(
-                            "text-[10px] uppercase tracking-[0.36em] transition-colors duration-500",
-                            isDarkTheme ? "text-white/60" : "text-[#1a1a1a]/60"
-                          )}
-                        >
-                          send to design lab
-                        </span>
-                      </div>
                     </div>
                   )}
                   <Link href="/intake" className={exploreLinkClass}>
@@ -471,67 +354,6 @@ export default function PopHomeWithTheme() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function NavItem({ label, href, isDark }: { label: string; href: string; isDark: boolean }) {
-  const itemClass = clsx(
-    "w-full rounded-sm px-1 py-1.5 transition cursor-pointer",
-    isDark ? "hover:bg-white/10" : "hover:bg-black/5"
-  );
-  return (
-    <Link href={href}>
-      <div className={itemClass}>
-        {label}
-      </div>
-    </Link>
-  );
-}
-
-/** Dotted paper background (outside the main board) */
-function DottedPaperBackdrop({ isDark }: { isDark: boolean }) {
-  const dotColor = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)";
-  const cornerBorderClass = isDark ? "border-white/20" : "border-black/10";
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 -z-10"
-      style={{
-        backgroundImage:
-          `radial-gradient(${dotColor} 1px, transparent 1px)`,
-        backgroundSize: "18px 18px",
-        backgroundPosition: "-9px -9px",
-      }}
-    >
-      {/* Rounded corner squiggle (top-right) */}
-      <div className={clsx("absolute right-2 top-2 h-10 w-10 rounded-tl-[22px] border-l-2 border-t-2", cornerBorderClass)} />
-    </div>
-  );
-}
-
-/** Inner square grid like the mock */
-function InnerGrid({ isDark }: { isDark: boolean }) {
-  const baseFillStyle = {
-    backgroundImage: isDark
-      ? "radial-gradient(circle at top, rgba(60,60,60,0.5), rgba(10,10,10,0.85))"
-      : "radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(215,215,215,0.85))",
-  };
-  const gridStyle = {
-    backgroundImage: isDark
-      ? "repeating-linear-gradient(0deg, transparent 0 29px, rgba(255,255,255,0.08) 29px 30px), repeating-linear-gradient(90deg, transparent 0 29px, rgba(255,255,255,0.08) 29px 30px)"
-      : "repeating-linear-gradient(0deg, transparent 0 29px, rgba(96,96,96,0.22) 29px 30px), repeating-linear-gradient(90deg, transparent 0 29px, rgba(96,96,96,0.22) 29px 30px)",
-  };
-
-  return (
-    <div className="absolute inset-0">
-      {/* base fill */}
-      <div className="absolute inset-0" style={baseFillStyle} />
-      {/* square grid using repeating-linear-gradient */}
-      <div
-        className="absolute inset-0 opacity-30"
-        style={gridStyle}
-      />
     </div>
   );
 }

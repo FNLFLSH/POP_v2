@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { useEffect, useMemo, useRef, useState, Suspense, useCallback } from "react";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -19,6 +19,8 @@ import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 import { GeneratedLayoutPreview } from "@/components/floorplan/GeneratedLayoutPreview";
 import { type GeneratedLayout } from "@/lib/layoutEngine";
 import { useThemeContext } from "@/components/providers/ThemeProvider";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { RotateCcw, Move, Maximize2, Minimize2 } from "lucide-react";
 
 type VenueRecord = {
   id: string;
@@ -125,6 +127,32 @@ function DesignLabsContent() {
     }
   }, []);
 
+  // Keep layout persistent across page states
+  useEffect(() => {
+    if (prefilledLayout && typeof window !== "undefined") {
+      // Store layout in localStorage for persistence
+      localStorage.setItem("popCurrentLayout", JSON.stringify(prefilledLayout));
+    }
+  }, [prefilledLayout]);
+
+  // Load persistent layout on mount
+  useEffect(() => {
+    if (typeof window === "undefined" || prefilledLayout) return;
+    
+    const persistentLayout = localStorage.getItem("popCurrentLayout");
+    if (persistentLayout) {
+      try {
+        const parsed = JSON.parse(persistentLayout) as StoredLayoutPayload;
+        if (parsed && parsed.layout) {
+          setPrefilledLayout(parsed);
+        }
+      } catch (err) {
+        console.error("Unable to parse persistent layout", err);
+        localStorage.removeItem("popCurrentLayout");
+      }
+    }
+  }, [prefilledLayout]);
+
   useEffect(() => {
     if (!prefilledLayout) return;
     setLayoutPreviewStatus("revealing");
@@ -188,40 +216,110 @@ function DesignLabsContent() {
         backgroundColor: "rgba(255,255,255,0.85)",
       };
 
+  const scrollWorkspaceToCenter = (behavior: ScrollBehavior = "smooth") => {
+    const element = workspaceRef.current;
+    if (!element) return;
+    const centerX = Math.max(
+      0,
+      element.scrollWidth / 2 - element.clientWidth / 2,
+    );
+    const centerY = Math.max(
+      0,
+      element.scrollHeight / 2 - element.clientHeight / 2,
+    );
+    element.scrollTo({
+      left: centerX,
+      top: centerY,
+      behavior,
+    });
+  };
+
+  const positionToolkitNearCenter = useCallback(() => {
+    const element = workspaceRef.current;
+    if (!element) return;
+    const scrollLeft = element.scrollLeft;
+    const scrollTop = element.scrollTop;
+    const centerX = scrollLeft + element.clientWidth / 2;
+    const centerY = scrollTop + element.clientHeight / 2;
+    
+    // Position toolkit to the right of the layout when in fullscreen
+    const desiredX = centerX + 350; // Further to the right
+    const desiredY = centerY; // Center vertically with layout
+    const clampedX = Math.max(24, Math.min(desiredX, element.scrollWidth - 280));
+    const clampedY = Math.max(24, Math.min(desiredY, element.scrollHeight - 200));
+    
+    setToolkitPosition((prev) => {
+      if (Math.abs(prev.x - clampedX) < 1 && Math.abs(prev.y - clampedY) < 1) {
+        return prev;
+      }
+      return { x: clampedX, y: clampedY };
+    });
+  }, []);
+
   useEffect(() => {
     if (!prefilledLayout && !prefillFlag) return;
     setIsFullScreen(true);
-    if (!workspaceRef.current) return;
-
     requestAnimationFrame(() => {
-      const element = workspaceRef.current;
-      if (!element) return;
-      const centerX = Math.max(
-        0,
-        element.scrollWidth / 2 - element.clientWidth / 2,
-      );
-      const centerY = Math.max(
-        0,
-        element.scrollHeight / 2 - element.clientHeight / 2,
-      );
-      element.scrollTo({
-        left: centerX,
-        top: centerY,
-        behavior: "smooth",
+      scrollWorkspaceToCenter("smooth");
+      requestAnimationFrame(() => {
+        positionToolkitNearCenter();
       });
     });
-  }, [prefilledLayout, prefillFlag]);
+  }, [prefilledLayout, prefillFlag, positionToolkitNearCenter]);
+
+  // Ensure layout is centered when page loads with existing layout
+  useEffect(() => {
+    if (prefilledLayout) {
+      requestAnimationFrame(() => {
+        scrollWorkspaceToCenter("smooth");
+        requestAnimationFrame(() => {
+          positionToolkitNearCenter();
+        });
+      });
+    }
+  }, [prefilledLayout, positionToolkitNearCenter]);
+
+  // Ensure toolkit is visible when layout is imported
+  useEffect(() => {
+    if (prefilledLayout) {
+      // Position toolkit to the right of the layout
+      const element = workspaceRef.current;
+      if (!element) return;
+      const scrollLeft = element.scrollLeft;
+      const scrollTop = element.scrollTop;
+      const centerX = scrollLeft + element.clientWidth / 2;
+      const centerY = scrollTop + element.clientHeight / 2;
+      const desiredX = centerX + 350; // Position further to the right of layout
+      const desiredY = centerY; // Center vertically with layout
+      const clampedX = Math.max(24, Math.min(desiredX, element.scrollWidth - 280));
+      const clampedY = Math.max(24, Math.min(desiredY, element.scrollHeight - 200));
+      setToolkitPosition({ x: clampedX, y: clampedY });
+    }
+  }, [prefilledLayout]);
 
   const handleReturnHome = () => {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("popSkipLanding", "true");
+      // Clear persistent layout when returning home
+      localStorage.removeItem("popCurrentLayout");
     }
   };
 
   const toggleFullScreen = () => {
-    setIsFullScreen((prev) => !prev);
-    requestAnimationFrame(() => {
-      workspaceRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    setIsFullScreen((prev) => {
+      const next = !prev;
+      requestAnimationFrame(() => {
+        if (!workspaceRef.current) return;
+        if (next) {
+          scrollWorkspaceToCenter("smooth");
+          requestAnimationFrame(() => {
+            positionToolkitNearCenter();
+          });
+        } else {
+          workspaceRef.current.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+        }
+      });
+      return next;
     });
   };
 
@@ -230,12 +328,19 @@ function DesignLabsContent() {
     if (!workspaceRef.current) return 'vertical';
     
     const containerRect = workspaceRef.current.getBoundingClientRect();
+    const centerX = containerRect.width / 2;
     const centerY = containerRect.height / 2;
+    
+    // If toolkit is positioned to the right of center (next to layout), keep it vertical
+    if (toolkitPosition.x > centerX + 200) {
+      return 'vertical';
+    }
     
     // If toolkit is positioned in top or bottom half, make it horizontal
     if (toolkitPosition.y < centerY - 100 || toolkitPosition.y > centerY + 100) {
       return 'horizontal';
     }
+    
     // Otherwise, keep it vertical (left/right sides)
     return 'vertical';
   };
@@ -541,74 +646,72 @@ function DesignLabsContent() {
                       ...workspaceBackdropStyle,
                     }}
                   >
-                    <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-6">
-                      {prefilledLayout && (
-                        <div
-                          className={clsx(
-                            "pointer-events-auto w-full max-w-[440px] rounded-[42px] border px-8 py-6 shadow-[0_0_60px_rgba(0,0,0,0.45)] backdrop-blur-sm transition-colors duration-500",
-                            isDarkTheme
-                              ? "border-white/14 bg-black/70"
-                              : "border-black/10 bg-white/85 shadow-[0_0_48px_rgba(0,0,0,0.18)]"
-                          )}
-                        >
-                          <div className="mb-4 flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.36em] opacity-70">
-                            <Sparkle className="h-4 w-4" />
-                            <span>layout synced</span>
+                    <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-6">
+                      {/* Always show layout if available, otherwise show venue holobox */}
+                      {prefilledLayout ? (
+                        <>
+                          <div className="pointer-events-auto">
+                            <ManipulatableLayout
+                              layout={prefilledLayout.layout}
+                              theme={isDarkTheme ? "dark" : "light"}
+                              status={layoutPreviewStatus}
+                            />
                           </div>
-                          <GeneratedLayoutPreview
-                            layout={prefilledLayout.layout}
-                            theme={isDarkTheme ? "dark" : "light"}
-                            status={layoutPreviewStatus}
-                            showLabel={false}
-                          />
-                          <div className="mt-4 text-center text-[11px] uppercase tracking-[0.3em] opacity-70">
-                            {prefilledLayout.layout.label}
-                          </div>
-                          <div className="text-center text-[10px] uppercase tracking-[0.24em] opacity-50">
-                            {prefilledLayout.address}
-                          </div>
-                        </div>
-                      )}
-                      <div
-                        className={clsx(
-                          "pointer-events-auto rounded-[42px] border px-10 py-8 shadow-[0_0_60px_rgba(0,0,0,0.55)] backdrop-blur-sm float-animation transition-colors duration-500",
-                          isDarkTheme
-                            ? "border-white/12 bg-gradient-to-b from-white/10 via-black/30 to-black/40"
-                            : "border-black/10 bg-gradient-to-b from-white/85 via-white/70 to-[#f5f5f5]"
-                        )}
-                      >
-                        {selectedVenue ? (
-                          <VenueHolobox
-                            address={selectedVenue.address}
-                            buildingType={
-                              selectedVenue.footprint?.properties?.building_type as string
-                            }
-                            footprint={selectedVenue.footprint}
-                            highlight
-                          />
-                        ) : (
                           <div
                             className={clsx(
-                              "flex h-52 w-80 items-center justify-center text-sm transition-colors duration-500",
-                              isDarkTheme ? "text-gray-300/70" : "text-black/60"
+                              "pointer-events-auto rounded-full border px-6 py-2 text-[11px] uppercase tracking-[0.32em] transition-colors duration-500",
+                              isDarkTheme
+                                ? "border-white/15 bg-white/10 text-white/70"
+                                : "border-black/15 bg-white/80 text-black/70"
                             )}
                           >
-                            {loading
-                              ? "Loading the suite..."
-                              : "Unlock a venue to render its island."}
+                            {prefilledLayout.address}
                           </div>
-                        )}
-                      </div>
-                      <div
-                        className={clsx(
-                          "rounded-full border px-6 py-2 text-xs uppercase tracking-[0.3em] transition-colors duration-500",
-                          isDarkTheme
-                            ? "border-white/15 bg-white/10 text-white/70"
-                            : "border-black/15 bg-white/80 text-black/70"
-                        )}
-                      >
-                        infinite canvas — drag to explore
-                      </div>
+                        </>
+                      ) : (
+                        <>
+                          <div
+                            className={clsx(
+                              "pointer-events-auto rounded-[42px] border px-10 py-8 shadow-[0_0_60px_rgba(0,0,0,0.55)] backdrop-blur-sm float-animation transition-colors duration-500",
+                              isDarkTheme
+                                ? "border-white/12 bg-gradient-to-b from-white/10 via-black/30 to-black/40"
+                                : "border-black/10 bg-gradient-to-b from-white/85 via-white/70 to-[#f5f5f5]"
+                            )}
+                          >
+                            {selectedVenue ? (
+                              <VenueHolobox
+                                address={selectedVenue.address}
+                                buildingType={
+                                  selectedVenue.footprint?.properties?.building_type as string
+                                }
+                                footprint={selectedVenue.footprint}
+                                highlight
+                              />
+                            ) : (
+                              <div
+                                className={clsx(
+                                  "flex h-52 w-80 items-center justify-center text-sm transition-colors duration-500",
+                                  isDarkTheme ? "text-gray-300/70" : "text-black/60"
+                                )}
+                              >
+                                {loading
+                                  ? "Loading the suite..."
+                                  : "Unlock a venue to render its island."}
+                              </div>
+                            )}
+                          </div>
+                          <div
+                            className={clsx(
+                              "rounded-full border px-6 py-2 text-xs uppercase tracking-[0.3em] transition-colors duration-500",
+                              isDarkTheme
+                                ? "border-white/15 bg-white/10 text-white/70"
+                                : "border-black/15 bg-white/80 text-black/70"
+                            )}
+                          >
+                            infinite canvas — drag to explore
+                          </div>
+                        </>
+                      )}
                     </div>
                     <ToolkitPanel
                       position={toolkitPosition}
@@ -729,4 +832,263 @@ function ToolkitPanel({
       )}
     </div>
   );
+}
+
+/** Inline ManipulatableLayout component */
+function ManipulatableLayout({
+  layout,
+  theme,
+  status = "ready",
+}: {
+  layout: GeneratedLayout;
+  theme: "dark" | "light";
+  status?: "generating" | "revealing" | "ready" | "packing";
+}) {
+  const isDark = theme === "dark";
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const ids = useMemo(() => {
+    const seed = Math.random().toString(36).slice(2, 10);
+    return {
+      clip: `layout-clip-${seed}`,
+      gradient: `layout-gradient-${seed}`,
+      glow: `layout-glow-${seed}`,
+    };
+  }, []);
+
+  const borderEdges = useMemo(
+    () => collectBoundaryEdges(layout.cells),
+    [layout.cells],
+  );
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      });
+    }
+  }, [position]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isDragging) {
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+      setPosition({ x: newX, y: newY });
+    }
+  }, [isDragging, dragStart]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const resetTransform = useCallback(() => {
+    setScale(1);
+    setRotation(0);
+    setPosition({ x: 0, y: 0 });
+  }, []);
+
+  const rotateLayout = useCallback(() => {
+    setRotation(prev => (prev + 90) % 360);
+  }, []);
+
+  const gradientStops = isDark
+    ? ["rgba(255,255,255,0.72)", "rgba(255,255,255,0.42)", "rgba(255,255,255,0.2)"]
+    : ["rgba(0,0,0,0.26)", "rgba(0,0,0,0.16)", "rgba(0,0,0,0.1)"];
+
+  const secondaryFill = isDark
+    ? "rgba(255,255,255,0.18)"
+    : "rgba(0,0,0,0.14)";
+
+  const outlineColor = isDark
+    ? "rgba(255,255,255,0.58)"
+    : "rgba(0,0,0,0.45)";
+
+  const glowOpacity = isDark ? 0.6 : 0.4;
+
+  return (
+    <div className="relative">
+      {/* Control Panel */}
+      <div
+        className={clsx(
+          "absolute -top-16 left-1/2 -translate-x-1/2 flex gap-2 rounded-full border px-4 py-2 backdrop-blur-sm transition-colors duration-500",
+          isDark
+            ? "border-white/15 bg-black/50 text-white"
+            : "border-black/15 bg-white/80 text-black"
+        )}
+      >
+        <button
+          onClick={resetTransform}
+          className={clsx(
+            "flex h-8 w-8 items-center justify-center rounded-full transition hover:scale-105",
+            isDark
+              ? "hover:bg-white/10"
+              : "hover:bg-black/10"
+          )}
+          title="Reset"
+        >
+          <Move className="h-4 w-4" />
+        </button>
+        <button
+          onClick={rotateLayout}
+          className={clsx(
+            "flex h-8 w-8 items-center justify-center rounded-full transition hover:scale-105",
+            isDark
+              ? "hover:bg-white/10"
+              : "hover:bg-black/10"
+          )}
+          title="Rotate 90°"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-2 px-2">
+          <Minimize2 className="h-3 w-3" />
+          <input
+            type="range"
+            min="0.5"
+            max="3"
+            step="0.1"
+            value={scale}
+            onChange={(e) => setScale(parseFloat(e.target.value))}
+            className="w-16"
+          />
+          <Maximize2 className="h-3 w-3" />
+        </div>
+      </div>
+
+      {/* Layout Container */}
+      <div
+        ref={containerRef}
+        className={clsx(
+          "relative cursor-grab active:cursor-grabbing transition-all duration-300",
+          status === "revealing" && "animate-pulse",
+          status === "packing" && "scale-95 opacity-50"
+        )}
+        style={{
+          transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
+          transformOrigin: "center center",
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        {/* Layout SVG */}
+        <div className="relative w-[600px] h-[600px]">
+          <svg
+            viewBox={`0 0 ${layout.gridSize} ${layout.gridSize}`}
+            preserveAspectRatio="xMidYMid meet"
+            className="h-full w-full"
+          >
+            <defs>
+              <clipPath id={ids.clip} clipPathUnits="userSpaceOnUse">
+                {layout.cells.map((cell) => (
+                  <rect
+                    key={`${cell.row}-${cell.col}`}
+                    x={cell.col}
+                    y={cell.row}
+                    width={1}
+                    height={1}
+                  />
+                ))}
+              </clipPath>
+              <linearGradient id={ids.gradient} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={gradientStops[0]} />
+                <stop offset="50%" stopColor={gradientStops[1]} />
+                <stop offset="100%" stopColor={gradientStops[2]} />
+              </linearGradient>
+              <filter id={ids.glow} x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow
+                  dx="0"
+                  dy="0"
+                  stdDeviation="0.32"
+                  floodColor={isDark ? "#ffffff" : "#000000"}
+                  floodOpacity={glowOpacity}
+                />
+              </filter>
+            </defs>
+
+            <g clipPath={`url(#${ids.clip})`} filter={`url(#${ids.glow})`}>
+              <rect
+                x={0}
+                y={0}
+                width={layout.gridSize}
+                height={layout.gridSize}
+                fill={`url(#${ids.gradient})`}
+              />
+            </g>
+
+            <g clipPath={`url(#${ids.clip})`}>
+              <rect
+                x={0}
+                y={0}
+                width={layout.gridSize}
+                height={layout.gridSize}
+                fill={secondaryFill}
+              />
+            </g>
+
+            <g
+              stroke={outlineColor}
+              strokeWidth={0.14}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {borderEdges.map((edge) => (
+                <line
+                  key={`${edge.start.x},${edge.start.y}->${edge.end.x},${edge.end.y}`}
+                  x1={edge.start.x}
+                  y1={edge.start.y}
+                  x2={edge.end.x}
+                  y2={edge.end.y}
+                />
+              ))}
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type Point = { x: number; y: number };
+type Edge = { start: Point; end: Point };
+
+function collectBoundaryEdges(cells: GeneratedLayout["cells"]): Edge[] {
+  const edgeMap = new Map<string, Edge>();
+
+  cells.forEach(({ row, col }) => {
+    const topLeft: Point = { x: col, y: row };
+    const topRight: Point = { x: col + 1, y: row };
+    const bottomRight: Point = { x: col + 1, y: row + 1 };
+    const bottomLeft: Point = { x: col, y: row + 1 };
+
+    addEdge(edgeMap, topLeft, topRight);
+    addEdge(edgeMap, topRight, bottomRight);
+    addEdge(edgeMap, bottomRight, bottomLeft);
+    addEdge(edgeMap, bottomLeft, topLeft);
+  });
+
+  return Array.from(edgeMap.values());
+}
+
+function addEdge(map: Map<string, Edge>, start: Point, end: Point) {
+  const key = edgeKey(start, end);
+  const reverse = edgeKey(end, start);
+
+  if (map.has(reverse)) {
+    map.delete(reverse);
+  } else {
+    map.set(key, { start, end });
+  }
+}
+
+function edgeKey(start: Point, end: Point): string {
+  return `${start.x},${start.y}->${end.x},${end.y}`;
 }

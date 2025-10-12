@@ -130,3 +130,4 @@ CREATE TRIGGER update_vendors_updated_at BEFORE UPDATE ON vendors
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 
+
