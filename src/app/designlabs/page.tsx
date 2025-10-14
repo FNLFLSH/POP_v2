@@ -11,6 +11,8 @@ import {
   Maximize2,
   Wand2,
   Minimize2,
+  RotateCcw,
+  Move,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
@@ -19,8 +21,6 @@ import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 import { GeneratedLayoutPreview } from "@/components/floorplan/GeneratedLayoutPreview";
 import { type GeneratedLayout } from "@/lib/layoutEngine";
 import { useThemeContext } from "@/components/providers/ThemeProvider";
-import { useState, useRef, useCallback, useMemo } from "react";
-import { RotateCcw, Move, Maximize2, Minimize2 } from "lucide-react";
 
 type VenueRecord = {
   id: string;
