@@ -78,6 +78,7 @@ function DesignLabsContent() {
   const { theme } = useThemeContext();
   const isDarkTheme = theme === "dark";
   const prefillFlag = params.get("prefillLayout");
+  const [hasAppliedPrefill, setHasAppliedPrefill] = useState(false);
 
   useEffect(() => {
     const fetchVenues = async () => {
@@ -202,6 +203,37 @@ function DesignLabsContent() {
   };
 
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [dimensions, setDimensions] = useState({ layoutSize: 600, workspaceSize: 3600 });
+
+  const computeDimensions = useCallback(() => {
+    if (typeof window === "undefined") {
+      return { layoutSize: 600, workspaceSize: 3600 };
+    }
+
+    const { innerWidth, innerHeight } = window;
+    const availableWidth = innerWidth - (isFullScreen ? 0 : 48); // Account for padding
+    const availableHeight = innerHeight - (isFullScreen ? 0 : 200); // Account for header/padding
+
+    const maxLayoutSize = Math.min(availableWidth * 0.6, availableHeight * 0.6);
+    const layoutSize = Math.max(300, Math.min(600, maxLayoutSize));
+    const workspaceSize = Math.max(layoutSize * 2, 1200);
+
+    return { layoutSize, workspaceSize };
+  }, [isFullScreen]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateDimensions = () => {
+      setDimensions(computeDimensions());
+    };
+
+    updateDimensions();
+    window.addEventListener("resize", updateDimensions);
+    return () => window.removeEventListener("resize", updateDimensions);
+  }, [computeDimensions]);
+
+  const { layoutSize, workspaceSize } = dimensions;
+  
   const workspaceBackdropStyle = isDarkTheme
     ? {
         backgroundImage:
@@ -242,11 +274,25 @@ function DesignLabsContent() {
     const centerX = scrollLeft + element.clientWidth / 2;
     const centerY = scrollTop + element.clientHeight / 2;
     
-    // Position toolkit to the right of the layout when in fullscreen
-    const desiredX = centerX + 350; // Further to the right
-    const desiredY = centerY; // Center vertically with layout
-    const clampedX = Math.max(24, Math.min(desiredX, element.scrollWidth - 280));
-    const clampedY = Math.max(24, Math.min(desiredY, element.scrollHeight - 200));
+    // Calculate responsive toolkit positioning
+    const toolkitWidth = isFullScreen ? 256 : 200;
+    const toolkitHeight = isFullScreen ? 400 : 320;
+    const layoutOffset = layoutSize / 2 + 50; // Space from layout edge
+    
+    let desiredX, desiredY;
+    if (isFullScreen) {
+      // In fullscreen: position to the left of the layout
+      desiredX = centerX - layoutOffset - toolkitWidth;
+      desiredY = centerY;
+    } else {
+      // In minimized: position in bottom-left area, scaled with screen size
+      const scaleFactor = Math.min(layoutSize / 600, 1); // Scale with layout size
+      desiredX = centerX - (layoutOffset * scaleFactor) - toolkitWidth;
+      desiredY = centerY + (layoutOffset * scaleFactor * 0.5);
+    }
+    
+    const clampedX = Math.max(24, Math.min(desiredX, element.scrollWidth - toolkitWidth));
+    const clampedY = Math.max(24, Math.min(desiredY, element.scrollHeight - toolkitHeight));
     
     setToolkitPosition((prev) => {
       if (Math.abs(prev.x - clampedX) < 1 && Math.abs(prev.y - clampedY) < 1) {
@@ -254,9 +300,10 @@ function DesignLabsContent() {
       }
       return { x: clampedX, y: clampedY };
     });
-  }, []);
+  }, [isFullScreen, layoutSize]);
 
   useEffect(() => {
+    if (hasAppliedPrefill) return;
     if (!prefilledLayout && !prefillFlag) return;
     setIsFullScreen(true);
     requestAnimationFrame(() => {
@@ -265,7 +312,13 @@ function DesignLabsContent() {
         positionToolkitNearCenter();
       });
     });
-  }, [prefilledLayout, prefillFlag, positionToolkitNearCenter]);
+    setHasAppliedPrefill(true);
+  }, [hasAppliedPrefill, prefilledLayout, prefillFlag, positionToolkitNearCenter]);
+
+  useEffect(() => {
+    if (isDragging) return;
+    positionToolkitNearCenter();
+  }, [isFullScreen, layoutSize, positionToolkitNearCenter, isDragging]);
 
   // Ensure layout is centered when page loads with existing layout
   useEffect(() => {
@@ -289,13 +342,17 @@ function DesignLabsContent() {
       const scrollTop = element.scrollTop;
       const centerX = scrollLeft + element.clientWidth / 2;
       const centerY = scrollTop + element.clientHeight / 2;
-      const desiredX = centerX + 350; // Position further to the right of layout
-      const desiredY = centerY; // Center vertically with layout
-      const clampedX = Math.max(24, Math.min(desiredX, element.scrollWidth - 280));
-      const clampedY = Math.max(24, Math.min(desiredY, element.scrollHeight - 200));
+      const panelWidth = isFullScreen ? 256 : 200;
+      const panelHeight = isFullScreen ? 400 : 320;
+      const desiredX = centerX + layoutSize / 2 + 80; // bias to right of layout
+      const desiredY = centerY - panelHeight / 2;
+      const maxX = Math.max(24, element.scrollWidth - panelWidth - 24);
+      const maxY = Math.max(24, element.scrollHeight - panelHeight - 24);
+      const clampedX = Math.max(24, Math.min(desiredX, maxX));
+      const clampedY = Math.max(24, Math.min(desiredY, maxY));
       setToolkitPosition({ x: clampedX, y: clampedY });
     }
-  }, [prefilledLayout]);
+  }, [prefilledLayout, isFullScreen, layoutSize]);
 
   const handleReturnHome = () => {
     if (typeof window !== "undefined") {
@@ -317,33 +374,17 @@ function DesignLabsContent() {
           });
         } else {
           workspaceRef.current.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+          requestAnimationFrame(() => {
+            positionToolkitNearCenter();
+          });
         }
       });
       return next;
     });
   };
 
-  // Determine if toolkit should be horizontal or vertical based on position
-  const getToolkitOrientation = () => {
-    if (!workspaceRef.current) return 'vertical';
-    
-    const containerRect = workspaceRef.current.getBoundingClientRect();
-    const centerX = containerRect.width / 2;
-    const centerY = containerRect.height / 2;
-    
-    // If toolkit is positioned to the right of center (next to layout), keep it vertical
-    if (toolkitPosition.x > centerX + 200) {
-      return 'vertical';
-    }
-    
-    // If toolkit is positioned in top or bottom half, make it horizontal
-    if (toolkitPosition.y < centerY - 100 || toolkitPosition.y > centerY + 100) {
-      return 'horizontal';
-    }
-    
-    // Otherwise, keep it vertical (left/right sides)
-    return 'vertical';
-  };
+  // Toolkit is always vertical
+  const getToolkitOrientation = () => 'vertical';
 
   const handleToolkitMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -621,32 +662,37 @@ function DesignLabsContent() {
                     : ""
                 )}
               >
-                {/* Fullscreen toggle button positioned relative to the grid window */}
-                <button
-                  onClick={toggleFullScreen}
-                  className={clsx(
-                    "pointer-events-auto absolute bottom-6 right-6 z-10 flex h-12 w-12 items-center justify-center rounded-full border transition hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 backdrop-blur-sm",
-                    isDarkTheme
-                      ? "border-white/15 bg-black/50 text-white/70 hover:bg-white/15 hover:text-white focus-visible:ring-white/30"
-                      : "border-black/15 bg-white/70 text-black/70 hover:bg-white focus-visible:ring-black/20"
-                  )}
-                  title={isFullScreen ? "Exit fullscreen" : "Enter fullscreen"}
-                >
-                  {isFullScreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-                </button>
+                {/* Layout toggle button positioned relative to the grid window */}
+                <div className="absolute bottom-6 right-6 z-10 flex flex-col items-end gap-2">
+                  <button
+                    onClick={toggleFullScreen}
+                    className={clsx(
+                      "pointer-events-auto flex items-center gap-2 rounded-full border px-4 py-2 text-xs uppercase tracking-[0.2em] transition hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 backdrop-blur-sm",
+                      isDarkTheme
+                        ? "border-white/15 bg-black/50 text-white/70 hover:bg-white/15 hover:text-white focus-visible:ring-white/30"
+                        : "border-black/15 bg-white/70 text-black/70 hover:bg-white focus-visible:ring-black/20"
+                    )}
+                    title={isFullScreen ? "Show page layout" : "Hide page layout"}
+                  >
+                    {isFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                    <span>{isFullScreen ? "Show Page" : "Hide Page"}</span>
+                  </button>
+                </div>
                 <div
                   ref={workspaceRef}
                   className="absolute inset-0 overflow-auto"
                 >
                   <div
-                    className="relative"
+                    className="relative flex items-center justify-center w-full h-full min-w-full min-h-full"
                     style={{
-                      minWidth: "3600px",
-                      minHeight: "3600px",
                       ...workspaceBackdropStyle,
+                      width: `${workspaceSize}px`,
+                      height: `${workspaceSize}px`,
+                      minWidth: "100%",
+                      minHeight: "100%",
                     }}
                   >
-                    <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-6">
+                    <div className="flex flex-col items-center gap-6">
                       {/* Always show layout if available, otherwise show venue holobox */}
                       {prefilledLayout ? (
                         <>
@@ -655,6 +701,8 @@ function DesignLabsContent() {
                               layout={prefilledLayout.layout}
                               theme={isDarkTheme ? "dark" : "light"}
                               status={layoutPreviewStatus}
+                              layoutSize={layoutSize}
+                              isFullScreen={isFullScreen}
                             />
                           </div>
                           <div
@@ -721,6 +769,8 @@ function DesignLabsContent() {
                       onMouseMove={handleToolkitMouseMove}
                       onMouseUp={handleToolkitMouseUp}
                       isDarkTheme={isDarkTheme}
+                      isFullScreen={isFullScreen}
+                      layoutSize={layoutSize}
                     />
                   </div>
                 </div>
@@ -750,6 +800,8 @@ function ToolkitPanel({
   onMouseMove, 
   onMouseUp,
   isDarkTheme,
+  isFullScreen = true,
+  layoutSize = 600,
 }: { 
   position: { x: number; y: number };
   orientation: 'horizontal' | 'vertical';
@@ -758,20 +810,23 @@ function ToolkitPanel({
   onMouseMove: (e: React.MouseEvent) => void;
   onMouseUp: () => void;
   isDarkTheme: boolean;
+  isFullScreen?: boolean;
+  layoutSize?: number;
 }) {
-  const isHorizontal = orientation === 'horizontal';
+  const isHorizontal = false; // Always vertical
   const cardClassName = clsx(
-    "rounded-2xl border px-3 py-2 transition",
+    "rounded-2xl border transition",
+    isFullScreen ? "px-3 py-2" : "px-2 py-1",
     isDarkTheme
       ? "border-white/10 bg-white/5 text-white/75 hover:border-white/20 hover:bg-white/10"
       : "border-black/10 bg-white text-black/75 hover:border-black/20 hover:bg-white/90"
   );
   const labelClassName = clsx(
-    "text-sm font-semibold",
+    isFullScreen ? "text-sm font-semibold" : "text-xs font-semibold",
     isDarkTheme ? "text-white" : "text-black"
   );
   const hintClassName = clsx(
-    "text-[11px] uppercase tracking-[0.3em]",
+    isFullScreen ? "text-[11px] uppercase tracking-[0.3em]" : "text-[10px] uppercase tracking-[0.25em]",
     isDarkTheme ? "text-white/40" : "text-black/40"
   );
   
@@ -787,8 +842,8 @@ function ToolkitPanel({
       style={{
         left: position.x,
         top: position.y,
-        width: isHorizontal ? 'auto' : '256px',
-        height: isHorizontal ? '120px' : 'auto',
+        width: isFullScreen ? '256px' : '200px',
+        height: 'auto',
       }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
@@ -796,8 +851,7 @@ function ToolkitPanel({
     >
       <div
         className={clsx(
-          "flex items-center gap-2 text-xs uppercase tracking-[0.32em]",
-          isHorizontal ? "mb-3" : "mb-3",
+          "flex items-center gap-2 text-xs uppercase tracking-[0.32em] mb-3",
           isDarkTheme ? "text-white/70" : "text-black/70"
         )}
       >
@@ -805,31 +859,17 @@ function ToolkitPanel({
         <span>Toolkit islands</span>
       </div>
       
-      {isHorizontal ? (
-        <div className="flex gap-3 overflow-x-auto">
-          {TOOLKIT.map((tool) => (
-            <div
-              key={tool.id}
-              className={clsx("min-w-[140px]", cardClassName)}
-            >
-              <div className={labelClassName}>{tool.label}</div>
-              <div className={hintClassName}>{tool.hint}</div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <ul className="space-y-2 text-xs">
-          {TOOLKIT.map((tool) => (
-            <li
-              key={tool.id}
-              className={cardClassName}
-            >
-              <div className={labelClassName}>{tool.label}</div>
-              <div className={hintClassName}>{tool.hint}</div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="space-y-2 text-xs">
+        {TOOLKIT.map((tool) => (
+          <li
+            key={tool.id}
+            className={cardClassName}
+          >
+            <div className={labelClassName}>{tool.label}</div>
+            <div className={hintClassName}>{tool.hint}</div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -839,10 +879,12 @@ function ManipulatableLayout({
   layout,
   theme,
   status = "ready",
+  layoutSize = 600,
 }: {
   layout: GeneratedLayout;
   theme: "dark" | "light";
   status?: "generating" | "revealing" | "ready" | "packing";
+  layoutSize?: number;
 }) {
   const isDark = theme === "dark";
   const [scale, setScale] = useState(1);
@@ -980,7 +1022,13 @@ function ManipulatableLayout({
         onMouseLeave={handleMouseUp}
       >
         {/* Layout SVG */}
-        <div className="relative w-[600px] h-[600px]">
+        <div 
+          className="relative"
+          style={{
+            width: `${layoutSize}px`,
+            height: `${layoutSize}px`,
+          }}
+        >
           <svg
             viewBox={`0 0 ${layout.gridSize} ${layout.gridSize}`}
             preserveAspectRatio="xMidYMid meet"
