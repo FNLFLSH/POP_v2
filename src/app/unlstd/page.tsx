@@ -18,6 +18,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
+import { useThemeContext } from "@/components/providers/ThemeProvider";
+import clsx from "clsx";
 
 type EventCard = {
   id: string;
@@ -314,6 +316,7 @@ const formatDate = (iso: string) => {
 };
 
 export default function DiscoverPage() {
+  const { theme } = useThemeContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
     city: "all",
@@ -323,6 +326,8 @@ export default function DiscoverPage() {
   const [selectedEvent, setSelectedEvent] = useState<EventCard | null>(null);
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  
+  const isDarkTheme = theme === 'dark';
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -400,14 +405,25 @@ export default function DiscoverPage() {
   };
 
   return (
-    <div className="bg-[#050505] text-[#f2f2f2]" style={{ overflow: 'auto', height: '100vh' }}>
+    <div 
+      className={clsx(
+        "transition-colors duration-500",
+        isDarkTheme ? "bg-[#050505] text-[#f2f2f2]" : "bg-[#f5f5f5] text-[#1a1a1a]"
+      )} 
+      style={{ overflow: 'auto', height: '100vh' }}
+    >
       <GlobalThemeToggle />
       
       {/* Top Navigation - Home button in top left */}
       <div className="fixed top-4 left-4 z-50">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-4 py-2 text-xs uppercase tracking-[0.32em] text-white/75 transition hover:border-white/25 hover:text-white backdrop-blur-sm"
+          className={clsx(
+            "inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs uppercase tracking-[0.32em] transition backdrop-blur-sm",
+            isDarkTheme 
+              ? "border border-white/15 bg-black/30 text-white/75 hover:border-white/25 hover:text-white"
+              : "border border-black/15 bg-white/30 text-black/75 hover:border-black/25 hover:text-black"
+          )}
         >
           <Home className="h-4 w-4" />
           <span>Home</span>
@@ -417,7 +433,12 @@ export default function DiscoverPage() {
       <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-6 pb-24 pt-20 md:px-10 lg:px-16">
         <Header />
 
-        <section className="flex flex-col gap-4 rounded-[32px] border border-white/10 bg-white/[0.02] p-6 backdrop-blur-sm lg:p-8">
+        <section className={clsx(
+          "flex flex-col gap-4 rounded-[32px] p-6 backdrop-blur-sm lg:p-8",
+          isDarkTheme 
+            ? "border border-white/10 bg-white/[0.02]"
+            : "border border-black/10 bg-black/[0.02]"
+        )}>
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
           <FilterControls
             activeFilters={filters}
@@ -429,7 +450,10 @@ export default function DiscoverPage() {
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            <h2 className={clsx(
+              "text-2xl font-semibold tracking-tight sm:text-3xl",
+              isDarkTheme ? "text-white" : "text-black"
+            )}>
               Events
             </h2>
           </div>
@@ -452,13 +476,22 @@ export default function DiscoverPage() {
 }
 
 function Header() {
+  const { theme } = useThemeContext();
+  const isDarkTheme = theme === 'dark';
+  
   return (
     <header className="space-y-4">
       <div className="flex flex-col items-start gap-2 text-left">
-        <div className="text-xs uppercase tracking-[0.32em] text-white/60">
+        <div className={clsx(
+          "text-xs uppercase tracking-[0.32em]",
+          isDarkTheme ? "text-white/60" : "text-black/60"
+        )}>
           discover
         </div>
-        <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+        <h1 className={clsx(
+          "text-3xl font-black tracking-tight sm:text-4xl",
+          isDarkTheme ? "text-white" : "text-black"
+        )}>
           Find your next night
         </h1>
       </div>
@@ -473,20 +506,41 @@ function SearchBar({
   value: string;
   onChange: (next: string) => void;
 }) {
+  const { theme } = useThemeContext();
+  const isDarkTheme = theme === 'dark';
+  
   return (
-    <div className="relative flex items-center overflow-hidden rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white/80 ring-white/10 transition focus-within:border-white/20 focus-within:ring-2">
-      <Search className="mr-3 h-4 w-4 text-white/40" />
+    <div className={clsx(
+      "relative flex items-center overflow-hidden rounded-2xl px-4 py-3 text-sm transition focus-within:ring-2",
+      isDarkTheme 
+        ? "border border-white/10 bg-black/40 text-white/80 ring-white/10 focus-within:border-white/20"
+        : "border border-black/10 bg-white/40 text-black/80 ring-black/10 focus-within:border-black/20"
+    )}>
+      <Search className={clsx(
+        "mr-3 h-4 w-4",
+        isDarkTheme ? "text-white/40" : "text-black/40"
+      )} />
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Search for venues, vibes, or price"
-        className="w-full bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+        className={clsx(
+          "w-full bg-transparent text-sm focus:outline-none",
+          isDarkTheme 
+            ? "text-white placeholder:text-white/40"
+            : "text-black placeholder:text-black/40"
+        )}
       />
       {value && (
         <button
           type="button"
           onClick={() => onChange("")}
-          className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-white/50 hover:border-white/20 hover:text-white"
+          className={clsx(
+            "rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.32em] transition",
+            isDarkTheme 
+              ? "border border-white/10 text-white/50 hover:border-white/20 hover:text-white"
+              : "border border-black/10 text-black/50 hover:border-black/20 hover:text-black"
+          )}
         >
           clear
         </button>
@@ -506,6 +560,9 @@ function FilterControls({
   openDropdown: string | null;
   onToggleDropdown: (key: string | null) => void;
 }) {
+  const { theme } = useThemeContext();
+  const isDarkTheme = theme === 'dark';
+  
   const filterConfigs = [
     { key: "city", options: FILTER_OPTIONS.city, label: "City" },
     { key: "timeframe", options: FILTER_OPTIONS.timeframe, label: "When" },
@@ -514,7 +571,12 @@ function FilterControls({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs uppercase tracking-[0.32em] text-white/60">
+      <span className={clsx(
+        "inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs uppercase tracking-[0.32em]",
+        isDarkTheme 
+          ? "border border-white/10 bg-white/5 text-white/60"
+          : "border border-black/10 bg-black/5 text-black/60"
+      )}>
         <Filter className="h-3.5 w-3.5" />
         filters
       </span>
@@ -531,14 +593,24 @@ function FilterControls({
                 e.stopPropagation();
                 onToggleDropdown(isOpen ? null : key);
               }}
-              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-[10px] uppercase tracking-[0.3em] text-white/70 hover:border-white/20 hover:text-white transition"
+              className={clsx(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.3em] transition",
+                isDarkTheme 
+                  ? "border border-white/10 bg-black/40 text-white/70 hover:border-white/20 hover:text-white"
+                  : "border border-black/10 bg-white/40 text-black/70 hover:border-black/20 hover:text-black"
+              )}
             >
               <span>{selectedOption?.label || label}</span>
               <ChevronDown className={`h-2.5 w-2.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             
             {isOpen && (
-              <div className="absolute top-full left-0 mt-1.5 min-w-[140px] max-h-[200px] rounded-lg border border-white/10 bg-black/60 backdrop-blur-sm shadow-xl z-50 overflow-hidden">
+              <div className={clsx(
+                "absolute top-full left-0 mt-1.5 min-w-[140px] max-h-[200px] rounded-lg backdrop-blur-sm shadow-xl z-50 overflow-hidden",
+                isDarkTheme 
+                  ? "border border-white/10 bg-black/60"
+                  : "border border-black/10 bg-white/60"
+              )}>
                 <div className="max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
                   {options.map((option) => {
                     const isActive = activeFilters[key] === option.value;
@@ -550,13 +622,18 @@ function FilterControls({
                           onSelect(key, option.value);
                           onToggleDropdown(null);
                         }}
-                        className={`w-full px-3 py-2 text-left text-[10px] uppercase tracking-[0.3em] transition hover:bg-white/10 ${
+                        className={clsx(
+                          "w-full px-3 py-2 text-left text-[10px] uppercase tracking-[0.3em] transition",
                           isActive
-                            ? "text-white bg-white/5"
-                            : "text-white/70 hover:text-white"
-                        } ${option === options[0] ? "rounded-t-lg" : ""} ${
+                            ? isDarkTheme 
+                              ? "text-white bg-white/5"
+                              : "text-black bg-black/5"
+                            : isDarkTheme
+                              ? "text-white/70 hover:text-white hover:bg-white/10"
+                              : "text-black/70 hover:text-black hover:bg-black/10",
+                          option === options[0] ? "rounded-t-lg" : "",
                           option === options[options.length - 1] ? "rounded-b-lg" : ""
-                        }`}
+                        )}
                       >
                         {option.label}
                       </button>
@@ -573,9 +650,17 @@ function FilterControls({
 }
 
 function EventGrid({ events, onEventClick }: { events: EventCard[]; onEventClick: (event: EventCard) => void }) {
+  const { theme } = useThemeContext();
+  const isDarkTheme = theme === 'dark';
+  
   if (events.length === 0) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-black/30 px-6 py-16 text-center text-sm text-white/60">
+      <div className={clsx(
+        "rounded-3xl px-6 py-16 text-center text-sm",
+        isDarkTheme 
+          ? "border border-white/10 bg-black/30 text-white/60"
+          : "border border-black/10 bg-white/30 text-black/60"
+      )}>
         No drops match those filters yet. Reset filters or check back after our next release window.
       </div>
     );
@@ -589,7 +674,12 @@ function EventGrid({ events, onEventClick }: { events: EventCard[]; onEventClick
           <article
             key={event.id}
             onClick={() => onEventClick(event)}
-            className="group flex h-full flex-col overflow-hidden rounded-[28px] border border-white/10 bg-black/40 shadow-[0_0_45px_rgba(0,0,0,0.35)] transition hover:border-white/20 hover:bg-black/60 cursor-pointer"
+            className={clsx(
+              "group flex h-full flex-col overflow-hidden rounded-[28px] transition cursor-pointer",
+              isDarkTheme 
+                ? "border border-white/10 bg-black/40 shadow-[0_0_45px_rgba(0,0,0,0.35)] hover:border-white/20 hover:bg-black/60"
+                : "border border-black/10 bg-white/40 shadow-[0_0_45px_rgba(0,0,0,0.15)] hover:border-black/20 hover:bg-white/60"
+            )}
           >
           <div
             className={`relative flex h-48 items-end justify-between overflow-hidden bg-gradient-to-br ${event.coverGradient} p-5 sm:h-56`}
@@ -607,30 +697,47 @@ function EventGrid({ events, onEventClick }: { events: EventCard[]; onEventClick
 
           <div className="flex flex-1 flex-col gap-4 p-5">
             <div className="space-y-1">
-              <h3 className="text-lg font-semibold text-white">{event.name}</h3>
-              <div className="flex items-center gap-2 text-[13px] text-white/70">
-                <Calendar className="h-4 w-4 text-white/40" />
+              <h3 className={clsx(
+                "text-lg font-semibold",
+                isDarkTheme ? "text-white" : "text-black"
+              )}>{event.name}</h3>
+              <div className={clsx(
+                "flex items-center gap-2 text-[13px]",
+                isDarkTheme ? "text-white/70" : "text-black/70"
+              )}>
+                <Calendar className={clsx("h-4 w-4", isDarkTheme ? "text-white/40" : "text-black/40")} />
                 <span>{formatDate(event.start)}</span>
               </div>
-              <div className="flex items-center gap-2 text-[13px] text-white/70">
-                <MapPin className="h-4 w-4 text-white/40" />
+              <div className={clsx(
+                "flex items-center gap-2 text-[13px]",
+                isDarkTheme ? "text-white/70" : "text-black/70"
+              )}>
+                <MapPin className={clsx("h-4 w-4", isDarkTheme ? "text-white/40" : "text-black/40")} />
                 <span>{event.location}</span>
               </div>
             </div>
 
-            <div className="grid gap-2 text-[12px] uppercase tracking-[0.32em] text-white/55">
+            <div className={clsx(
+              "grid gap-2 text-[12px] uppercase tracking-[0.32em]",
+              isDarkTheme ? "text-white/55" : "text-black/55"
+            )}>
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-white/35" />
+                <Users className={clsx("h-4 w-4", isDarkTheme ? "text-white/35" : "text-black/35")} />
                 <span>{event.attendees} going · {event.spotsLeft} left</span>
               </div>
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-white/35" />
+                <Sparkles className={clsx("h-4 w-4", isDarkTheme ? "text-white/35" : "text-black/35")} />
                 <span>{vibeLabel}</span>
               </div>
             </div>
 
             <div className="mt-auto flex items-center justify-between">
-              <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.32em] text-white/60">
+              <span className={clsx(
+                "rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.32em]",
+                isDarkTheme 
+                  ? "border border-white/10 text-white/60"
+                  : "border border-black/10 text-black/60"
+              )}>
                 {event.ageGate}
               </span>
               <button
@@ -639,7 +746,12 @@ function EventGrid({ events, onEventClick }: { events: EventCard[]; onEventClick
                   e.stopPropagation();
                   onEventClick(event);
                 }}
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] uppercase tracking-[0.3em] text-white/70 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                className={clsx(
+                  "inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] uppercase tracking-[0.3em] transition",
+                  isDarkTheme 
+                    ? "border border-white/15 bg-white/5 text-white/70 hover:border-white/30 hover:bg-white/10 hover:text-white"
+                    : "border border-black/15 bg-black/5 text-black/70 hover:border-black/30 hover:bg-black/10 hover:text-black"
+                )}
               >
                 get tickets
               </button>
@@ -663,19 +775,32 @@ function EventModal({
   ticketQuantity: number;
   onTicketQuantityChange: (quantity: number) => void;
 }) {
+  const { theme } = useThemeContext();
+  const isDarkTheme = theme === 'dark';
+  
   const vibeLabel = event.vibe.replace(/-/g, " ");
   const totalPrice = event.price === "FREE" ? 0 : parseInt(event.price.replace("$", "")) * ticketQuantity;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="mx-4 flex max-w-6xl max-h-[90vh] w-full overflow-hidden rounded-3xl border border-white/10 bg-black/60 shadow-2xl">
+      <div className={clsx(
+        "mx-4 flex max-w-6xl max-h-[90vh] w-full overflow-hidden rounded-3xl shadow-2xl",
+        isDarkTheme 
+          ? "border border-white/10 bg-black/60"
+          : "border border-black/10 bg-white/60"
+      )}>
         {/* Event Flyer - Left Side */}
         <div className="flex-1 p-8">
           <div className={`relative h-full min-h-[500px] rounded-2xl bg-gradient-to-br ${event.coverGradient} p-8 flex flex-col justify-between`}>
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 rounded-full border border-white/20 bg-black/30 p-2 text-white/70 hover:bg-black/50 hover:text-white transition"
+              className={clsx(
+                "absolute top-4 right-4 rounded-full p-2 transition",
+                isDarkTheme 
+                  ? "border border-white/20 bg-black/30 text-white/70 hover:bg-black/50 hover:text-white"
+                  : "border border-black/20 bg-white/30 text-black/70 hover:bg-white/50 hover:text-black"
+              )}
             >
               <X className="h-4 w-4" />
             </button>
@@ -724,24 +849,45 @@ function EventModal({
         <div className="w-96 p-8 flex flex-col">
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Get Your Tickets</h2>
-              <p className="text-white/70">Secure your spot for this exclusive event</p>
+              <h2 className={clsx(
+                "text-2xl font-bold mb-2",
+                isDarkTheme ? "text-white" : "text-black"
+              )}>Get Your Tickets</h2>
+              <p className={clsx(
+                isDarkTheme ? "text-white/70" : "text-black/70"
+              )}>Secure your spot for this exclusive event</p>
             </div>
 
             {/* Ticket Quantity */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-white/90">Number of Tickets</label>
+              <label className={clsx(
+                "text-sm font-medium",
+                isDarkTheme ? "text-white/90" : "text-black/90"
+              )}>Number of Tickets</label>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => onTicketQuantityChange(Math.max(1, ticketQuantity - 1))}
-                  className="rounded-full border border-white/20 bg-white/5 p-2 text-white/70 hover:bg-white/10 hover:text-white transition"
+                  className={clsx(
+                    "rounded-full p-2 transition",
+                    isDarkTheme 
+                      ? "border border-white/20 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                      : "border border-black/20 bg-black/5 text-black/70 hover:bg-black/10 hover:text-black"
+                  )}
                 >
                   -
                 </button>
-                <span className="text-xl font-semibold text-white w-8 text-center">{ticketQuantity}</span>
+                <span className={clsx(
+                  "text-xl font-semibold w-8 text-center",
+                  isDarkTheme ? "text-white" : "text-black"
+                )}>{ticketQuantity}</span>
                 <button
                   onClick={() => onTicketQuantityChange(Math.min(10, ticketQuantity + 1))}
-                  className="rounded-full border border-white/20 bg-white/5 p-2 text-white/70 hover:bg-white/10 hover:text-white transition"
+                  className={clsx(
+                    "rounded-full p-2 transition",
+                    isDarkTheme 
+                      ? "border border-white/20 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+                      : "border border-black/20 bg-black/5 text-black/70 hover:bg-black/10 hover:text-black"
+                  )}
                 >
                   +
                 </button>
@@ -749,17 +895,34 @@ function EventModal({
             </div>
 
             {/* Price Breakdown */}
-            <div className="space-y-3 p-4 rounded-xl border border-white/10 bg-white/5">
-              <div className="flex justify-between text-white/90">
+            <div className={clsx(
+              "space-y-3 p-4 rounded-xl",
+              isDarkTheme 
+                ? "border border-white/10 bg-white/5"
+                : "border border-black/10 bg-black/5"
+            )}>
+              <div className={clsx(
+                "flex justify-between",
+                isDarkTheme ? "text-white/90" : "text-black/90"
+              )}>
                 <span>Tickets ({ticketQuantity}x)</span>
                 <span>{event.price === "FREE" ? "FREE" : `$${parseInt(event.price.replace("$", "")) * ticketQuantity}`}</span>
               </div>
-              <div className="flex justify-between text-white/90">
+              <div className={clsx(
+                "flex justify-between",
+                isDarkTheme ? "text-white/90" : "text-black/90"
+              )}>
                 <span>Service Fee</span>
                 <span>{event.price === "FREE" ? "FREE" : "$2.50"}</span>
               </div>
-              <div className="border-t border-white/10 pt-3">
-                <div className="flex justify-between text-lg font-semibold text-white">
+              <div className={clsx(
+                "border-t pt-3",
+                isDarkTheme ? "border-white/10" : "border-black/10"
+              )}>
+                <div className={clsx(
+                  "flex justify-between text-lg font-semibold",
+                  isDarkTheme ? "text-white" : "text-black"
+                )}>
                   <span>Total</span>
                   <span>{event.price === "FREE" ? "FREE" : `$${totalPrice + 2.50}`}</span>
                 </div>
@@ -773,7 +936,10 @@ function EventModal({
             </button>
 
             {/* Additional Info */}
-            <div className="space-y-2 text-sm text-white/60">
+            <div className={clsx(
+              "space-y-2 text-sm",
+              isDarkTheme ? "text-white/60" : "text-black/60"
+            )}>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 <span>Tickets are non-refundable</span>
