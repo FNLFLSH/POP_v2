@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Send } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
 import GlobalThemeToggle from '@/components/common/GlobalThemeToggle';
 
 type IntakeAnswer = {
@@ -29,9 +29,7 @@ const INITIAL_STATE: Record<string, string> = QUESTIONS.reduce(
 export default function IntakePage() {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>(INITIAL_STATE);
-  const [loading, setLoading] = useState(false);
-  const [sessionSecret, setSessionSecret] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const currentQuestion = QUESTIONS[stepIndex];
 
@@ -53,32 +51,11 @@ export default function IntakePage() {
     setStepIndex((idx) => Math.max(idx - 1, 0));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!isComplete) return;
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch('/api/chatkit/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          intake: QUESTIONS.map((q) => ({ id: q.id, question: q.question, answer: answers[q.id] })),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create AI session');
-      }
-
-      const payload = await response.json();
-      setSessionSecret(payload?.client_secret ?? null);
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : 'Unable to start AI questionnaire');
-    } finally {
-      setLoading(false);
-    }
+    setIsSubmitted(true);
+    // Store answers in localStorage for now
+    localStorage.setItem('intake-answers', JSON.stringify(answers));
   };
 
   return (
@@ -102,8 +79,7 @@ export default function IntakePage() {
           <aside className="md:w-64">
             <h1 className="text-2xl font-semibold text-white">Tell us about your event</h1>
             <p className="mt-2 text-sm text-white/60">
-              We translate these answers into DesignLabz prompts and campaign tasks. Complete the sequence and we’ll
-              open an AI planning session tailored to your responses.
+              We translate these answers into DesignLabz prompts and campaign tasks. Complete the sequence to save your event preferences.
             </p>
             <Progress steps={QUESTIONS.length} current={stepIndex} />
           </aside>
@@ -129,31 +105,20 @@ export default function IntakePage() {
                   </button>
                   <button
                     onClick={stepIndex === QUESTIONS.length - 1 ? handleSubmit : handleNext}
-                    disabled={!answers[currentQuestion.id]?.trim() || loading}
+                    disabled={!answers[currentQuestion.id]?.trim()}
                     className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white transition hover:bg-white/15 disabled:opacity-30"
                   >
                     {stepIndex === QUESTIONS.length - 1 ? 'Submit' : 'Next'}
-                    {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   </button>
                 </div>
               </div>
 
-              {error && (
-                <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-200">
-                  {error}
-                </div>
-              )}
-
-              {sessionSecret && (
+              {isSubmitted && (
                 <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-6 text-sm text-white/70">
-                  <div className="text-xs uppercase tracking-[0.35em] text-white/50">AI Session Ready</div>
+                  <div className="text-xs uppercase tracking-[0.35em] text-white/50">Intake Complete</div>
                   <p>
-                    Your answers are saved. Launch the AI assistant to refine layouts, ask follow-ups, or request a
-                    campaign playbook.
+                    Your answers have been saved. Use this information to create your event layout in DesignLabz.
                   </p>
-                  <code className="block rounded-xl bg-black/40 px-3 py-3 text-xs text-white/80">
-                    client_secret: {sessionSecret}
-                  </code>
                 </div>
               )}
             </div>
