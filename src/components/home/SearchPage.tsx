@@ -1,55 +1,26 @@
 'use client';
 
-import Link from "next/link";
-import Image from "next/image";
-import { useEffect, useRef, useState, FormEvent, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import clsx from "clsx";
-import { AlertCircle, Loader2, Search } from "lucide-react";
+import { useState, FormEvent, useRef } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import clsx from 'clsx';
+import { AlertCircle, Loader2, Search } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { useThemeContext } from '@/components/providers/ThemeProvider';
-import { BeaconPin } from '@/components/icons/BeaconPin';
-import { DottedPaperBackdrop, InnerGrid, NavItem } from "./HomeChrome";
+import { DottedPaperBackdrop, InnerGrid } from './HomeChrome';
 
-/**
- * POP! Home – Dark Mode (full screen, no circles)
- * - Single-file React component
- * - TailwindCSS for styling
- * - Includes: header title, left sidebar with hamburger + nav, center search bar & CTA,
- *   inner gray grid canvas, outer dotted paper backdrop.
- * - Full screen layout without decorative balls
- */
-
-export default function PopHomeWithTheme() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+export default function SearchPage() {
   const [address, setAddress] = useState('');
-  const [landingVisible, setLandingVisible] = useState(true);
-  const [shakeStage, setShakeStage] = useState(false);
   const router = useRouter();
-  const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { theme } = useThemeContext();
   const isDarkTheme = theme === 'dark';
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [validating, setValidating] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const skipLanding = sessionStorage.getItem('popSkipLanding') === 'true';
-    setLandingVisible(!skipLanding);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (shakeTimeoutRef.current) {
-        clearTimeout(shakeTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const sanitizedAddress = useMemo(() => address.trim(), [address]);
-
   const runSearchFlow = async () => {
+    const sanitizedAddress = address.trim();
     if (!sanitizedAddress) {
       setAddressError("Enter an address");
       inputRef.current?.focus();
@@ -72,10 +43,9 @@ export default function PopHomeWithTheme() {
 
       if (typeof window !== "undefined") {
         localStorage.setItem("venueAddress", sanitizedAddress);
-        sessionStorage.setItem("popSkipLanding", "true");
       }
 
-      router.push(`/layout-preview?address=${encodeURIComponent(sanitizedAddress)}`);
+      router.push(`/blueprint?address=${encodeURIComponent(sanitizedAddress)}`);
     } catch (error) {
       console.error("Address validation failed", error);
       setAddressError("We couldn't locate that venue. Try refining the address.");
@@ -90,33 +60,9 @@ export default function PopHomeWithTheme() {
     await runSearchFlow();
   };
 
-  const handleLandingReveal = () => {
-    setLandingVisible(false);
-    setShakeStage(true);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('popSkipLanding', 'true');
-    }
-    if (shakeTimeoutRef.current) {
-      clearTimeout(shakeTimeoutRef.current);
-    }
-    shakeTimeoutRef.current = setTimeout(() => setShakeStage(false), 700);
-    requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
-  };
-
-  const handleReigniteLanding = () => {
-    setShakeStage(false);
-    setLandingVisible(true);
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('popSkipLanding');
-    }
-  };
-
   const boardClassName = clsx(
     "h-full shadow-[0_0_32px_rgba(0,0,0,0.35)] transition-transform duration-500",
-    isDarkTheme ? "bg-[#111111]" : "bg-[#fcfcfc]",
-    shakeStage && "animate-screen-shake"
+    isDarkTheme ? "bg-[#111111]" : "bg-[#fcfcfc]"
   );
 
   const containerClassName = clsx(
@@ -141,22 +87,9 @@ export default function PopHomeWithTheme() {
   const exploreLinkClass = isDarkTheme
     ? "text-xs uppercase tracking-[0.35em] text-[#bdbdbd] hover:text-white transition-colors"
     : "text-xs uppercase tracking-[0.35em] text-[#5a5a5a] hover:text-[#1f1f1f] transition-colors";
-  const hamburgerClass = clsx(
-    "absolute left-4 top-6 z-30 h-10 w-10 flex flex-col items-center justify-center gap-1.5 rounded-md border transition-colors",
-    isDarkTheme
-      ? "border-white/10 bg-[#181818] hover:bg-[#222222]"
-      : "border-[#d8d8d8] bg-white/80 hover:bg-white"
-  );
-  const hamburgerBarClass = isDarkTheme ? "bg-[#f1f1f1]" : "bg-[#2f2f2f]";
-  const sidebarNavClass = isDarkTheme
-    ? "space-y-2 text-[14px] font-semibold tracking-tight text-[#e0e0e0]"
-    : "space-y-2 text-[14px] font-semibold tracking-tight text-[#1f1f1f]";
-  const profileTextClass = isDarkTheme ? "text-[#e0e0e0]" : "text-[#1f1f1f]";
 
   return (
     <div className={containerClassName}>
-      {landingVisible && <LandingIntro onReveal={handleLandingReveal} isDark={isDarkTheme} />}
-
       {/* Outer dotted paper backdrop */}
       <div className="relative h-full w-full">
         <DottedPaperBackdrop isDark={isDarkTheme} />
@@ -168,17 +101,14 @@ export default function PopHomeWithTheme() {
             <div className="relative h-full overflow-hidden">
               {/* Title at top center */}
               <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-30">
-                <button
-                  type="button"
-                  onClick={handleReigniteLanding}
+                <h1
                   className={clsx(
                     "font-black tracking-tight text-[38px] sm:text-[56px] leading-none transition hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
                     isDarkTheme ? "text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.6)]" : "text-[#1a1a1a] drop-shadow-[0_0_10px_rgba(0,0,0,0.15)]"
                   )}
-                  aria-label="Replay POP! landing experience"
                 >
                   POP!
-                </button>
+                </h1>
               </div>
 
               {/* Inner square grid background */}
@@ -204,7 +134,7 @@ export default function PopHomeWithTheme() {
                           <input
                             className={clsx(
                               inputClassName,
-                              "pr-12", // Add padding for the icon
+                              "pr-12",
                               addressError ? "border-red-500/60 focus:border-red-400 focus:ring-red-400/30" : "",
                               validating ? "opacity-70 cursor-wait" : ""
                             )}
@@ -219,7 +149,7 @@ export default function PopHomeWithTheme() {
                             ref={inputRef}
                             disabled={validating}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !validating && sanitizedAddress) {
+                              if (e.key === 'Enter' && !validating && address.trim()) {
                                 e.preventDefault();
                                 runSearchFlow();
                               }
@@ -235,7 +165,7 @@ export default function PopHomeWithTheme() {
                                 : "bg-white/20 hover:bg-white/30 hover:scale-105 active:scale-95"
                             )}
                             aria-label="Search address"
-                            disabled={validating || !sanitizedAddress}
+                            disabled={validating || !address.trim()}
                           >
                             {displaySpinner ? (
                               <Loader2 className="h-4 w-4 animate-spin text-white" />
@@ -282,74 +212,10 @@ export default function PopHomeWithTheme() {
                 </div>
               </div>
 
-              {/* Hamburger Button - Always visible */}
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className={hamburgerClass}
-              >
-                <span
-                  className={clsx(
-                    "h-1 transition-all duration-300",
-                    hamburgerBarClass,
-                    sidebarOpen ? "w-6 rotate-45 translate-y-1.5" : "w-6"
-                  )}
-                />
-                <span
-                  className={clsx(
-                    "h-1 transition-all duration-300",
-                    hamburgerBarClass,
-                    sidebarOpen ? "w-0 opacity-0" : "w-6"
-                  )}
-                />
-                <span
-                  className={clsx(
-                    "h-1 transition-all duration-300",
-                    hamburgerBarClass,
-                    sidebarOpen ? "w-6 -rotate-45 -translate-y-1.5" : "w-6"
-                  )}
-                />
-              </button>
-
               {/* Theme Toggle Button - Top right */}
               <div className="absolute right-4 top-6 z-30">
                 <ThemeToggle />
               </div>
-
-              {/* Collapsible Left Sidebar */}
-              <aside className={`absolute left-0 top-0 z-20 h-full transition-all duration-300 ${
-                sidebarOpen ? 'w-[180px] border-r border-gray-200 dark:border-white/10 bg-gray-50/5 dark:bg-white/5 backdrop-blur' : 'w-0'
-              }`}>
-
-                {/* Nav - Only show when sidebar is open */}
-                <div className={`transition-all duration-300 overflow-hidden ${
-                  sidebarOpen ? 'opacity-100 mt-20 px-4 py-5' : 'opacity-0 h-0'
-                }`}>
-                  <nav className={sidebarNavClass}>
-                    <NavItem label="discover" href="/unlstd" isDark={isDarkTheme} />
-                    <NavItem label="designlabs" href="/designlabs" isDark={isDarkTheme} />
-                    <NavItem label="MyEvents" href="/myevents" isDark={isDarkTheme} />
-                    <NavItem label="marketplace" href="/marketplace" isDark={isDarkTheme} />
-                    <NavItem label="Metrics" href="/metrics" isDark={isDarkTheme} />
-                    <NavItem label="Settings" href="/settings" isDark={isDarkTheme} />
-                  </nav>
-
-                  {/* Bottom profile area */}
-                  <div className={clsx("absolute inset-x-0 bottom-3 px-4 text-[13px]", profileTextClass)}>
-                    <div className={clsx("mb-2 h-10 w-10 rounded-full border", isDarkTheme ? "border-white/15 bg-[#1c1c1c]" : "border-[#d0d0d0] bg-white/85")} />
-                    <div className="pl-0.5 text-xs opacity-70">Name</div>
-                    <button
-                      className={clsx(
-                        "mt-2 rounded border px-2 py-1 text-left text-xs transition-colors",
-                        isDarkTheme
-                          ? "border-white/15 opacity-90 hover:bg-white/10"
-                          : "border-[#d0d0d0] text-[#1f1f1f] hover:bg-white"
-                      )}
-                    >
-                      invite
-                    </button>
-                  </div>
-                </div>
-              </aside>
             </div>
           </div>
         </div>
@@ -358,52 +224,3 @@ export default function PopHomeWithTheme() {
   );
 }
 
-function LandingIntro({ onReveal, isDark }: { onReveal: () => void; isDark: boolean }) {
-  const backgroundColor = isDark ? "#050505" : "#ffffff";
-  const labelTone = isDark ? "text-white/60" : "text-[#505050]/70";
-  const buttonPalette = isDark
-    ? "from-[#2f2f2f] via-[#3d3d3d] to-[#4b4b4b] text-white"
-    : "from-[#f0f0f0] via-[#e2e2e2] to-[#d4d4d4] text-[#1f1f1f]";
-
-  return (
-    <div
-      className="absolute inset-0 z-40 flex items-center justify-center"
-      style={{ backgroundColor }}
-    >
-      <div className="relative flex h-full w-full max-w-[960px] flex-col items-center justify-center px-6">
-        <div className="relative mb-12 flex h-64 w-full max-w-[420px] items-center justify-center">
-          <div
-            className="landing-map absolute inset-x-4 bottom-0 h-48 rounded-full"
-            style={{
-              backgroundImage: "url('/landing-map-grid.svg')",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              filter: "grayscale(1) drop-shadow(0 14px 40px rgba(0,0,0,0.35))",
-              opacity: isDark ? 0.78 : 0.92,
-              pointerEvents: "none",
-            }}
-          />
-          <BeaconPin animated aria-hidden={true} />
-        </div>
-        <div className="flex flex-col items-center gap-5 text-center">
-          <div className={clsx("text-xs uppercase tracking-[0.42em]", labelTone)}>
-            drop safe. plan bold.
-          </div>
-          <button
-            type="button"
-            onClick={onReveal}
-            className={clsx(
-              "landing-enter-btn rounded-full px-12 py-3 text-sm font-semibold uppercase tracking-[0.32em] bg-gradient-to-r focus-visible:outline-none focus-visible:ring-4",
-              buttonPalette,
-              isDark
-                ? "border border-[#4d4d4d] shadow-[0_18px_45px_rgba(0,0,0,0.45)] focus-visible:ring-white/15"
-                : "border border-[#d4d4d4] shadow-[0_18px_45px_rgba(0,0,0,0.2)] focus-visible:ring-black/10"
-            )}
-          >
-            Enter
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

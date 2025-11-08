@@ -1,11 +1,11 @@
 'use client';
 
 import Link from "next/link";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import { useEffect, useState, Suspense } from "react";
+import { Sparkles } from "lucide-react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FloorplanIsland } from "@/components/visuals/FloorplanIsland";
+import { Building3D } from "@/components/visuals/Building3D";
 import { BeaconPin } from "@/components/icons/BeaconPin";
 import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 
@@ -36,6 +36,11 @@ function VenueBlueprintContent() {
       params.get("address") ||
       localStorage.getItem("venueAddress") ||
       "123 Main St, New York, NY";
+
+    // Store the original searched address
+    if (typeof window !== 'undefined' && address) {
+      sessionStorage.setItem('popOriginalAddress', address);
+    }
 
     fetchVenueData(address);
   }, [params]);
@@ -146,16 +151,17 @@ function VenueBlueprintContent() {
     }
   };
 
-  const address =
-    venueData?.geocode?.display_name ||
-    params.get("address") ||
-    "POP Venue Unlock";
-
-  const handleReturnHome = () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("popSkipLanding", "true");
+  // Get the original searched address, fallback to display_name or params
+  const address = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const originalAddress = sessionStorage.getItem('popOriginalAddress');
+      if (originalAddress) {
+        return originalAddress;
+      }
     }
-  };
+    return params.get("address") || venueData?.geocode?.display_name || "POP Venue Unlock";
+  }, [params, venueData]);
+
 
   return (
     <div className="h-screen w-screen bg-[#111111] text-white overflow-hidden">
@@ -166,15 +172,6 @@ function VenueBlueprintContent() {
         <div className="relative h-full w-full">
           <div className="h-full bg-gradient-to-b from-[#1b1b1b] via-[#242424] to-[#0e0e0e] shadow-[0_0_50px_rgba(0,0,0,0.55)]">
             <div className="relative px-8 pt-10 pb-6 z-10">
-              <Link
-                href="/"
-                onClick={handleReturnHome}
-                className="absolute left-8 top-8 flex items-center space-x-2 rounded-full border border-gray-600/40 bg-[#333333]/70 px-4 py-2 text-xs uppercase tracking-[0.34em] text-gray-300/75 transition hover:border-gray-500/70 hover:text-gray-50"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back Home</span>
-              </Link>
-
               <div className="flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2 rounded-full border border-gray-500/40 px-4 py-1 text-xs uppercase tracking-[0.35em] text-gray-300/70">
                   <Sparkles className="h-3.5 w-3.5 text-gray-200" />
@@ -191,14 +188,51 @@ function VenueBlueprintContent() {
               </div>
             </div>
 
-            <div className="relative z-10 flex h-[calc(100%-220px)] w-full flex-col items-center gap-12 px-6 pb-14">
-              <FloorplanIsland
-                footprint={venueData?.footprint}
-                address={address}
-                status={loading ? "Generating volumetric shell" : error ? "Fallback layout" : "Layout unlocked"}
-                loading={loading}
-                error={error}
-              />
+            <div className="relative z-10 flex h-[calc(100%-220px)] w-full flex-col items-center gap-8 px-6 pb-8">
+              <div className="w-full max-w-6xl h-[calc(100vh-240px)] min-h-[600px]">
+                {loading ? (
+                  <div className="flex items-center justify-center h-full text-white/70">
+                    <div className="text-center">
+                      <div className="text-sm uppercase tracking-[0.35em] mb-2">Loading building...</div>
+                      <div className="text-xs text-white/50">Generating 3D volumetric shell</div>
+                    </div>
+                  </div>
+                ) : error ? (
+                  <div className="flex items-center justify-center h-full text-red-300/70">
+                    <div className="text-center">
+                      <div className="text-sm uppercase tracking-[0.35em] mb-2">Error loading building</div>
+                      <div className="text-xs text-red-300/50">Using fallback layout</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative w-full h-full">
+                    <Building3D
+                      footprint={venueData?.footprint}
+                      address={address}
+                      height={15}
+                      wireframe={false}
+                    />
+                    {/* Instructions Overlay */}
+                    <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg border border-white/20 p-4 max-w-xs text-white text-sm z-10">
+                      <h3 className="font-semibold mb-2 text-xs uppercase tracking-wider">3D Controls</h3>
+                      <ul className="space-y-1.5 text-xs">
+                        <li className="flex items-start gap-2">
+                          <span className="text-white/60">•</span>
+                          <span><strong>Rotate:</strong> Click & drag</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-white/60">•</span>
+                          <span><strong>Zoom:</strong> Scroll wheel</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-white/60">•</span>
+                          <span><strong>Pan:</strong> Right-click & drag</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="flex flex-col items-center gap-6 text-center">
                 {saveError && (
@@ -208,12 +242,22 @@ function VenueBlueprintContent() {
                 )}
                 <div className="text-xs uppercase tracking-[0.4em] text-white/50">Send to DesignLabz Suite</div>
                 <Link
-                  href={`/designlabs?address=${encodeURIComponent(address)}`}
-                  onClick={(event) => handleLaunchDesignLabz(event)}
+                  href={`/designlabs?address=${encodeURIComponent(address)}&fullscreen=1`}
+                  onClick={(event) => {
+                    handleLaunchDesignLabz(event);
+                    // Store footprint data for design lab
+                    if (venueData?.footprint && typeof window !== 'undefined') {
+                      sessionStorage.setItem('popBuildingFootprint', JSON.stringify({
+                        footprint: venueData.footprint,
+                        address: address,
+                        geocode: venueData.geocode,
+                      }));
+                    }
+                  }}
                   className={`transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
                     saving || loading ? "pointer-events-none opacity-40" : ""
                   }`}
-                  aria-label="Launch DesignLabz Suite"
+                  aria-label="Launch DesignLabz Suite Full Screen"
                 >
                   <BeaconPin aria-hidden animated={false} className="h-20 w-20" />
                 </Link>

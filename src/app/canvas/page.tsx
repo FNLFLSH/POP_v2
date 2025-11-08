@@ -4,17 +4,10 @@ import { useState, useEffect } from 'react';
 import DynamicEventCanvas from '@/components/canvas/DynamicEventCanvas';
 import Toolbar from '@/components/canvas/Toolbar';
 import PropertiesPanel from '@/components/canvas/PropertiesPanel';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import GlobalThemeToggle from '@/components/common/GlobalThemeToggle';
 
 export default function CanvasPage() {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const handleReturnHome = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('popSkipLanding', 'true');
-    }
-  };
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -36,14 +29,6 @@ export default function CanvasPage() {
       <header className="bg-gradient-to-r from-[#1c1c1c] via-[#2a2a2a] to-[#3a3a3a] text-white p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Link
-              href="/"
-              onClick={handleReturnHome}
-              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span>Back to Home</span>
-            </Link>
             <h1 className="text-2xl font-bold">Event Layout Manager</h1>
           </div>
           <div className="text-sm opacity-90">

@@ -1,7 +1,6 @@
 'use client';
 
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 
 export default function LayoutSelectionPage() {
@@ -13,11 +12,6 @@ export default function LayoutSelectionPage() {
     { id: 5, name: "Conference", description: "Meeting rooms and networking areas" },
     { id: 6, name: "Wedding", description: "Ceremony and reception layouts" },
   ];
-  const handleReturnHome = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('popSkipLanding', 'true');
-    }
-  };
 
   return (
     <div className="h-screen w-screen bg-[#1a1a1a] text-white overflow-hidden">
@@ -31,16 +25,6 @@ export default function LayoutSelectionPage() {
           <div className="h-full bg-[#2a2a2a] shadow-xl">
             {/* Header */}
             <div className="relative p-6">
-              {/* Back button */}
-              <Link
-                href="/"
-                onClick={handleReturnHome}
-                className="absolute left-6 top-6 flex items-center space-x-2 hover:opacity-80 transition-opacity"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span>Back to Home</span>
-              </Link>
-
               {/* Title - centered */}
               <div className="flex justify-center pt-2">
                 <h1 className="font-black tracking-tight text-[32px] sm:text-[48px] leading-none text-[#ffffff]">

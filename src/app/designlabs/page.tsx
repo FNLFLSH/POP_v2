@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, Suspense, useCallback } from "react";
 import {
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Sparkle,
@@ -21,6 +20,7 @@ import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 import { GeneratedLayoutPreview } from "@/components/floorplan/GeneratedLayoutPreview";
 import { type GeneratedLayout } from "@/lib/layoutEngine";
 import { useThemeContext } from "@/components/providers/ThemeProvider";
+import { FloorPlan3D } from "@/components/designlabs/FloorPlan3D";
 
 type VenueRecord = {
   id: string;
@@ -28,6 +28,12 @@ type VenueRecord = {
   geocode?: { lat: number; lon: number; display_name: string };
   footprint?: { coordinates: [number, number][]; properties?: Record<string, unknown> };
   created_at?: string;
+};
+
+type BuildingFootprintData = {
+  footprint: { coordinates: [number, number][]; properties?: Record<string, unknown> };
+  address: string;
+  geocode?: { lat: number; lon: number; display_name: string };
 };
 
 type StoredLayoutPayload = {
@@ -72,12 +78,14 @@ function DesignLabsContent() {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [prefilledLayout, setPrefilledLayout] = useState<StoredLayoutPayload | null>(null);
   const [layoutPreviewStatus, setLayoutPreviewStatus] = useState<"generating" | "revealing" | "ready" | "packing">("ready");
+  const [buildingFootprint, setBuildingFootprint] = useState<BuildingFootprintData | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const params = useSearchParams();
   const { theme } = useThemeContext();
   const isDarkTheme = theme === "dark";
   const prefillFlag = params.get("prefillLayout");
+  const fullscreenFlag = params.get("fullscreen");
   const [hasAppliedPrefill, setHasAppliedPrefill] = useState(false);
 
   useEffect(() => {
@@ -113,6 +121,23 @@ function DesignLabsContent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    
+    // Check for building footprint from blueprint page
+    const footprintData = sessionStorage.getItem("popBuildingFootprint");
+    if (footprintData) {
+      try {
+        const parsed = JSON.parse(footprintData) as BuildingFootprintData;
+        if (parsed && parsed.footprint) {
+          setBuildingFootprint(parsed);
+        }
+      } catch (err) {
+        console.error("Unable to parse building footprint", err);
+      } finally {
+        sessionStorage.removeItem("popBuildingFootprint");
+      }
+    }
+
+    // Check for generated layout
     const stored = sessionStorage.getItem("popGeneratedLayout");
     if (!stored) return;
 
@@ -304,8 +329,15 @@ function DesignLabsContent() {
 
   useEffect(() => {
     if (hasAppliedPrefill) return;
-    if (!prefilledLayout && !prefillFlag) return;
-    setIsFullScreen(true);
+    if (!prefilledLayout && !prefillFlag && !fullscreenFlag && !buildingFootprint) return;
+    
+    // Auto-fullscreen if coming from blueprint or has building footprint
+    if (fullscreenFlag || buildingFootprint) {
+      setIsFullScreen(true);
+    } else if (prefilledLayout || prefillFlag) {
+      setIsFullScreen(true);
+    }
+    
     requestAnimationFrame(() => {
       scrollWorkspaceToCenter("smooth");
       requestAnimationFrame(() => {
@@ -313,7 +345,7 @@ function DesignLabsContent() {
       });
     });
     setHasAppliedPrefill(true);
-  }, [hasAppliedPrefill, prefilledLayout, prefillFlag, positionToolkitNearCenter]);
+  }, [hasAppliedPrefill, prefilledLayout, prefillFlag, fullscreenFlag, buildingFootprint, positionToolkitNearCenter]);
 
   useEffect(() => {
     if (isDragging) return;
@@ -354,13 +386,6 @@ function DesignLabsContent() {
     }
   }, [prefilledLayout, isFullScreen, layoutSize]);
 
-  const handleReturnHome = () => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("popSkipLanding", "true");
-      // Clear persistent layout when returning home
-      localStorage.removeItem("popCurrentLayout");
-    }
-  };
 
   const toggleFullScreen = () => {
     setIsFullScreen((prev) => {
@@ -484,19 +509,6 @@ function DesignLabsContent() {
           >
             {!isFullScreen && (
               <header className="relative z-10 px-8 pb-6 pt-10">
-                <Link
-                  href="/"
-                  onClick={handleReturnHome}
-                  className={clsx(
-                    "absolute left-8 top-9 flex items-center space-x-2 rounded-full border px-4 py-2 text-xs uppercase tracking-[0.34em] transition focus-visible:outline-none focus-visible:ring-2",
-                    isDarkTheme
-                      ? "border-gray-600/30 bg-[#333333]/60 text-gray-300/70 hover:border-gray-400/60 hover:text-gray-100 focus-visible:ring-white/20"
-                      : "border-black/10 bg-white/70 text-black/60 hover:border-black/20 hover:text-black focus-visible:ring-black/20"
-                  )}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span>Back Home</span>
-                </Link>
                 <div className="flex flex-col items-center gap-4">
                   <div
                     className={clsx(
@@ -693,8 +705,59 @@ function DesignLabsContent() {
                     }}
                   >
                     <div className="flex flex-col items-center gap-6">
-                      {/* Always show layout if available, otherwise show venue holobox */}
-                      {prefilledLayout ? (
+                      {/* Show 3D floor plan if building footprint is available */}
+                      {buildingFootprint ? (
+                        <>
+                          <div className="pointer-events-auto w-full max-w-6xl h-[calc(100vh-180px)] min-h-[700px] relative">
+                            <FloorPlan3D
+                              footprint={buildingFootprint.footprint}
+                              address={buildingFootprint.address}
+                              onItemPlaced={(item) => {
+                                console.log("Item placed:", item);
+                              }}
+                            />
+                            {/* Instructions Overlay */}
+                            <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg border border-white/20 p-4 max-w-sm text-white text-sm z-10">
+                              <h3 className="font-semibold mb-3 text-xs uppercase tracking-wider">Design Lab Instructions</h3>
+                              <div className="space-y-3 text-xs">
+                                <div>
+                                  <p className="font-medium mb-1.5">3D Navigation:</p>
+                                  <ul className="space-y-1 ml-2 text-white/80">
+                                    <li>• <strong>Rotate:</strong> Click & drag</li>
+                                    <li>• <strong>Zoom:</strong> Scroll wheel</li>
+                                    <li>• <strong>Pan:</strong> Right-click & drag</li>
+                                  </ul>
+                                </div>
+                                <div>
+                                  <p className="font-medium mb-1.5">Adding Items:</p>
+                                  <ul className="space-y-1 ml-2 text-white/80">
+                                    <li>• Drag items from the toolkit panel</li>
+                                    <li>• Place them on the floor plan</li>
+                                    <li>• Items appear as 3D objects</li>
+                                  </ul>
+                                </div>
+                                <div>
+                                  <p className="font-medium mb-1.5">Toolkit Panel:</p>
+                                  <ul className="space-y-1 ml-2 text-white/80">
+                                    <li>• Drag the panel to reposition</li>
+                                    <li>• Click items to add to your design</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div
+                            className={clsx(
+                              "pointer-events-auto rounded-full border px-6 py-2 text-[11px] uppercase tracking-[0.32em] transition-colors duration-500",
+                              isDarkTheme
+                                ? "border-white/15 bg-white/10 text-white/70"
+                                : "border-black/15 bg-white/80 text-black/70"
+                            )}
+                          >
+                            {buildingFootprint.address}
+                          </div>
+                        </>
+                      ) : prefilledLayout ? (
                         <>
                           <div className="pointer-events-auto">
                             <ManipulatableLayout

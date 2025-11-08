@@ -6,7 +6,6 @@ import {
   Calendar,
   Compass,
   Filter,
-  Home,
   MapPin,
   Search,
   Sparkles,
@@ -414,22 +413,6 @@ export default function DiscoverPage() {
     >
       <GlobalThemeToggle />
       
-      {/* Top Navigation - Home button in top left */}
-      <div className="fixed top-4 left-4 z-50">
-        <Link
-          href="/"
-          className={clsx(
-            "inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs uppercase tracking-[0.32em] transition backdrop-blur-sm",
-            isDarkTheme 
-              ? "border border-white/15 bg-black/30 text-white/75 hover:border-white/25 hover:text-white"
-              : "border border-black/15 bg-white/30 text-black/75 hover:border-black/25 hover:text-black"
-          )}
-        >
-          <Home className="h-4 w-4" />
-          <span>Home</span>
-        </Link>
-      </div>
-
       <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-6 pb-24 pt-20 md:px-10 lg:px-16">
         <Header />
 
@@ -488,12 +471,18 @@ function Header() {
         )}>
           discover
         </div>
-        <h1 className={clsx(
-          "text-3xl font-black tracking-tight sm:text-4xl",
-          isDarkTheme ? "text-white" : "text-black"
-        )}>
-          Find your next night
-        </h1>
+        <div className="flex items-center gap-3">
+          <Compass className={clsx(
+            "h-8 w-8",
+            isDarkTheme ? "text-white" : "text-black"
+          )} />
+          <h1 className={clsx(
+            "text-3xl font-black tracking-tight sm:text-4xl",
+            isDarkTheme ? "text-white" : "text-black"
+          )}>
+            Find your next night
+          </h1>
+        </div>
       </div>
     </header>
   );

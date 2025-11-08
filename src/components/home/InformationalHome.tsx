@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, ShoppingBag, Calendar, Compass, CheckCircle2, Loader2, Mail, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,31 +89,6 @@ export default function InformationalHome() {
       : 'border-gray-200 bg-gray-50 hover:border-gray-300'
   );
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    // Try to load an audio the user added; fallback filenames
-    const audio = new Audio('/balloon.mp3');
-    // If mp3 fails, try wav lazily when playing
-    audioRef.current = audio;
-  }, []);
-
-  const handleDemoClick = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = 0;
-    audio.play().catch(async () => {
-      // try wav fallback silently
-      try {
-        const wav = new Audio('/balloon.wav');
-        audioRef.current = wav;
-        wav.currentTime = 0;
-        await wav.play();
-      } catch (_) {
-        // ignore if file not present
-      }
-    });
-  };
 
   return (
     <div className={clsx('min-h-screen', isDark ? 'bg-[#050505]' : 'bg-[#fafafa]')}>
@@ -126,9 +102,16 @@ export default function InformationalHome() {
           <div className="flex-1"></div>
           <h1 className="text-3xl font-black tracking-tight text-glow flex-1 text-center">POP!</h1>
           <div className="flex-1 flex justify-end">
-            <Link href="/demo">
+            <Link 
+              href="/"
+              onClick={() => {
+                // Mark that user has seen welcome page
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem('popHasSeenWelcome', 'true');
+                }
+              }}
+            >
               <Button
-                onClick={handleDemoClick}
                 variant="outline"
                 className="group relative h-12 rounded-full px-4 gap-2 float-animation pulse-glow"
                 aria-label="Launch POP! Demo"
@@ -164,10 +147,10 @@ export default function InformationalHome() {
       {/* Hero/Overview Section */}
       <section 
         ref={(el) => (sectionRefs.current[0] = el)}
-        className={`${sectionClass} section-hidden min-h-[50vh] flex items-center pb-8`}
+        className={`${sectionClass} section-hidden min-h-[50vh] flex items-center pb-4`}
       >
         <div className="container mx-auto max-w-5xl">
-          <div className="text-center mb-8">
+          <div className="text-center">
             <motion.h2 
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -180,10 +163,46 @@ export default function InformationalHome() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-xl md:text-2xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto"
+              className="text-xl md:text-2xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-6"
             >
               Transform any venue into a design playground. Plan, discover, and execute unforgettable events with POP!
             </motion.p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="flex justify-center"
+            >
+              <div className={clsx(
+                'relative w-full max-w-lg h-48 md:h-64 rounded-2xl overflow-hidden border shadow-xl',
+                isDark 
+                  ? 'border-white/10 bg-gradient-to-br from-purple-500/30 via-pink-500/20 to-purple-500/30' 
+                  : 'border-purple-200/50 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50'
+              )}>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center p-8 relative z-10">
+                    <div className={clsx(
+                      'text-5xl md:text-7xl mb-3',
+                      isDark ? 'text-white/90' : 'text-purple-600'
+                    )}>
+                      ✨
+                    </div>
+                    <p className={clsx(
+                      'text-sm md:text-base font-semibold uppercase tracking-wider',
+                      isDark ? 'text-white/90' : 'text-purple-700'
+                    )}>
+                      Create. Design. Experience.
+                    </p>
+                  </div>
+                </div>
+                <div className={clsx(
+                  'absolute inset-0 opacity-20',
+                  isDark 
+                    ? 'bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.1)_0%,_transparent_70%)]' 
+                    : 'bg-[radial-gradient(circle_at_center,_rgba(168,85,247,0.1)_0%,_transparent_70%)]'
+                )} />
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -191,7 +210,7 @@ export default function InformationalHome() {
       {/* Our Mission */}
       <section 
         ref={(el) => (sectionRefs.current[1] = el)}
-        className={`${sectionClass} py-12`}
+        className={`${sectionClass} py-8`}
       >
         <div className="container mx-auto max-w-5xl">
           <ScrollSection>
