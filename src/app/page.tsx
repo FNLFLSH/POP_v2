@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SearchPage from '@/components/home/SearchPage';
 
 export default function Home() {
   const router = useRouter();
+  const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     // Check if user has seen the welcome page before
@@ -14,11 +15,20 @@ export default function Home() {
       if (!hasSeenWelcome) {
         // First visit - show welcome page
         router.replace('/welcome');
-        return;
+      } else {
+        // They've seen welcome, show search page
+        setShouldRender(true);
       }
+    } else {
+      // Server-side: default to showing search page
+      setShouldRender(true);
     }
   }, [router]);
 
-  // If they've seen welcome, show search page
+  // Only render SearchPage after we've checked sessionStorage
+  if (!shouldRender) {
+    return null;
+  }
+
   return <SearchPage />;
 }

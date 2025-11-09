@@ -347,6 +347,13 @@ function DesignLabsContent() {
     setHasAppliedPrefill(true);
   }, [hasAppliedPrefill, prefilledLayout, prefillFlag, fullscreenFlag, buildingFootprint, positionToolkitNearCenter]);
 
+  // Auto-fullscreen when building footprint is loaded (only on initial load)
+  useEffect(() => {
+    if (buildingFootprint && !hasAppliedPrefill) {
+      setIsFullScreen(true);
+    }
+  }, [buildingFootprint, hasAppliedPrefill]);
+
   useEffect(() => {
     if (isDragging) return;
     positionToolkitNearCenter();
@@ -385,6 +392,14 @@ function DesignLabsContent() {
       setToolkitPosition({ x: clampedX, y: clampedY });
     }
   }, [prefilledLayout, isFullScreen, layoutSize]);
+
+  // Position toolkit for building footprint mode
+  useEffect(() => {
+    if (buildingFootprint) {
+      // Position toolkit in bottom-right corner
+      setToolkitPosition({ x: window.innerWidth - 280, y: window.innerHeight - 450 });
+    }
+  }, [buildingFootprint]);
 
 
   const toggleFullScreen = () => {
@@ -692,72 +707,158 @@ function DesignLabsContent() {
                 </div>
                 <div
                   ref={workspaceRef}
-                  className="absolute inset-0 overflow-auto"
+                  className={clsx(
+                    "absolute inset-0",
+                    buildingFootprint && isFullScreen ? "overflow-hidden" : "overflow-auto"
+                  )}
                 >
-                  <div
-                    className="relative flex items-center justify-center w-full h-full min-w-full min-h-full"
-                    style={{
-                      ...workspaceBackdropStyle,
-                      width: `${workspaceSize}px`,
-                      height: `${workspaceSize}px`,
-                      minWidth: "100%",
-                      minHeight: "100%",
-                    }}
-                  >
-                    <div className="flex flex-col items-center gap-6">
-                      {/* Show 3D floor plan if building footprint is available */}
-                      {buildingFootprint ? (
-                        <>
-                          <div className="pointer-events-auto w-full max-w-6xl h-[calc(100vh-180px)] min-h-[700px] relative">
-                            <FloorPlan3D
-                              footprint={buildingFootprint.footprint}
-                              address={buildingFootprint.address}
-                              onItemPlaced={(item) => {
-                                console.log("Item placed:", item);
-                              }}
-                            />
-                            {/* Instructions Overlay */}
-                            <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg border border-white/20 p-4 max-w-sm text-white text-sm z-10">
-                              <h3 className="font-semibold mb-3 text-xs uppercase tracking-wider">Design Lab Instructions</h3>
-                              <div className="space-y-3 text-xs">
-                                <div>
-                                  <p className="font-medium mb-1.5">3D Navigation:</p>
-                                  <ul className="space-y-1 ml-2 text-white/80">
-                                    <li>• <strong>Rotate:</strong> Click & drag</li>
-                                    <li>• <strong>Zoom:</strong> Scroll wheel</li>
-                                    <li>• <strong>Pan:</strong> Right-click & drag</li>
-                                  </ul>
-                                </div>
-                                <div>
-                                  <p className="font-medium mb-1.5">Adding Items:</p>
-                                  <ul className="space-y-1 ml-2 text-white/80">
-                                    <li>• Drag items from the toolkit panel</li>
-                                    <li>• Place them on the floor plan</li>
-                                    <li>• Items appear as 3D objects</li>
-                                  </ul>
-                                </div>
-                                <div>
-                                  <p className="font-medium mb-1.5">Toolkit Panel:</p>
-                                  <ul className="space-y-1 ml-2 text-white/80">
-                                    <li>• Drag the panel to reposition</li>
-                                    <li>• Click items to add to your design</li>
-                                  </ul>
-                                </div>
-                              </div>
-                            </div>
+                  {buildingFootprint && isFullScreen ? (
+                    // Simplified layout for building footprint mode (fullscreen)
+                    <div className="relative w-full h-full">
+                      <FloorPlan3D
+                        footprint={buildingFootprint.footprint}
+                        address={buildingFootprint.address}
+                        onItemPlaced={(item) => {
+                          console.log("Item placed:", item);
+                        }}
+                      />
+                      {/* Simplified Instructions Overlay */}
+                      <div className={clsx(
+                        "absolute top-4 left-4 rounded-lg border p-3 max-w-xs z-10 backdrop-blur-sm",
+                        isDarkTheme
+                          ? "bg-black/70 border-white/20 text-white"
+                          : "bg-white/90 border-black/20 text-black"
+                      )}>
+                        <h3 className={clsx(
+                          "font-semibold mb-2 text-xs uppercase tracking-wider",
+                          isDarkTheme ? "text-white" : "text-black"
+                        )}>
+                          DESIGN LAB INSTRUCTIONS
+                        </h3>
+                        <div className="space-y-2 text-xs">
+                          <div>
+                            <p className={clsx(
+                              "font-medium mb-1",
+                              isDarkTheme ? "text-white/90" : "text-black/90"
+                            )}>3D Navigation:</p>
+                            <ul className={clsx(
+                              "space-y-0.5 ml-2",
+                              isDarkTheme ? "text-white/80" : "text-black/70"
+                            )}>
+                              <li>• <strong>Rotate:</strong> Click & drag</li>
+                              <li>• <strong>Zoom:</strong> Scroll wheel</li>
+                              <li>• <strong>Pan:</strong> Right-click & drag</li>
+                            </ul>
                           </div>
-                          <div
-                            className={clsx(
-                              "pointer-events-auto rounded-full border px-6 py-2 text-[11px] uppercase tracking-[0.32em] transition-colors duration-500",
-                              isDarkTheme
-                                ? "border-white/15 bg-white/10 text-white/70"
-                                : "border-black/15 bg-white/80 text-black/70"
-                            )}
-                          >
-                            {buildingFootprint.address}
+                          <div>
+                            <p className={clsx(
+                              "font-medium mb-1",
+                              isDarkTheme ? "text-white/90" : "text-black/90"
+                            )}>Adding Items:</p>
+                            <ul className={clsx(
+                              "space-y-0.5 ml-2",
+                              isDarkTheme ? "text-white/80" : "text-black/70"
+                            )}>
+                              <li>• Drag items from the toolkit panel</li>
+                              <li>• Place them on the floor plan</li>
+                              <li>• Items appear as 3D objects</li>
+                            </ul>
                           </div>
-                        </>
-                      ) : prefilledLayout ? (
+                          <div>
+                            <p className={clsx(
+                              "font-medium mb-1",
+                              isDarkTheme ? "text-white/90" : "text-black/90"
+                            )}>Toolkit Panel:</p>
+                            <ul className={clsx(
+                              "space-y-0.5 ml-2",
+                              isDarkTheme ? "text-white/80" : "text-black/70"
+                            )}>
+                              <li>• Drag the panel to reposition</li>
+                              <li>• Click items to add to your design</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Address Badge */}
+                      <div className={clsx(
+                        "absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border px-4 py-1.5 text-[10px] uppercase tracking-[0.3em] backdrop-blur-sm",
+                        isDarkTheme
+                          ? "border-white/15 bg-white/10 text-white/80"
+                          : "border-black/15 bg-white/80 text-black/70"
+                      )}>
+                        {buildingFootprint.address}
+                      </div>
+                      {/* Toolkit Panel for building footprint mode */}
+                      <ToolkitPanel
+                        position={toolkitPosition}
+                        orientation={getToolkitOrientation()}
+                        isDragging={isDragging}
+                        onMouseDown={handleToolkitMouseDown}
+                        onMouseMove={handleToolkitMouseMove}
+                        onMouseUp={handleToolkitMouseUp}
+                        isDarkTheme={isDarkTheme}
+                        isFullScreen={true}
+                        layoutSize={layoutSize}
+                      />
+                    </div>
+                  ) : buildingFootprint && !isFullScreen ? (
+                    // Building footprint in non-fullscreen mode (show in workspace)
+                    <div
+                      className="relative flex items-center justify-center w-full h-full min-w-full min-h-full"
+                      style={{
+                        ...workspaceBackdropStyle,
+                        width: `${workspaceSize}px`,
+                        height: `${workspaceSize}px`,
+                        minWidth: "100%",
+                        minHeight: "100%",
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-6">
+                        <div className="pointer-events-auto w-full max-w-4xl h-[600px] relative">
+                          <FloorPlan3D
+                            footprint={buildingFootprint.footprint}
+                            address={buildingFootprint.address}
+                            onItemPlaced={(item) => {
+                              console.log("Item placed:", item);
+                            }}
+                          />
+                        </div>
+                        <div
+                          className={clsx(
+                            "pointer-events-auto rounded-full border px-6 py-2 text-[11px] uppercase tracking-[0.32em] transition-colors duration-500",
+                            isDarkTheme
+                              ? "border-white/15 bg-white/10 text-white/70"
+                              : "border-black/15 bg-white/80 text-black/70"
+                          )}
+                        >
+                          {buildingFootprint.address}
+                        </div>
+                      </div>
+                      <ToolkitPanel
+                        position={toolkitPosition}
+                        orientation={getToolkitOrientation()}
+                        isDragging={isDragging}
+                        onMouseDown={handleToolkitMouseDown}
+                        onMouseMove={handleToolkitMouseMove}
+                        onMouseUp={handleToolkitMouseUp}
+                        isDarkTheme={isDarkTheme}
+                        isFullScreen={isFullScreen}
+                        layoutSize={layoutSize}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="relative flex items-center justify-center w-full h-full min-w-full min-h-full"
+                      style={{
+                        ...workspaceBackdropStyle,
+                        width: `${workspaceSize}px`,
+                        height: `${workspaceSize}px`,
+                        minWidth: "100%",
+                        minHeight: "100%",
+                      }}
+                    >
+                      <div className="flex flex-col items-center gap-6">
+                        {prefilledLayout ? (
                         <>
                           <div className="pointer-events-auto">
                             <ManipulatableLayout
@@ -822,20 +923,21 @@ function DesignLabsContent() {
                             infinite canvas — drag to explore
                           </div>
                         </>
-                      )}
+                        )}
+                      </div>
+                      <ToolkitPanel
+                        position={toolkitPosition}
+                        orientation={getToolkitOrientation()}
+                        isDragging={isDragging}
+                        onMouseDown={handleToolkitMouseDown}
+                        onMouseMove={handleToolkitMouseMove}
+                        onMouseUp={handleToolkitMouseUp}
+                        isDarkTheme={isDarkTheme}
+                        isFullScreen={isFullScreen}
+                        layoutSize={layoutSize}
+                      />
                     </div>
-                    <ToolkitPanel
-                      position={toolkitPosition}
-                      orientation={getToolkitOrientation()}
-                      isDragging={isDragging}
-                      onMouseDown={handleToolkitMouseDown}
-                      onMouseMove={handleToolkitMouseMove}
-                      onMouseUp={handleToolkitMouseUp}
-                      isDarkTheme={isDarkTheme}
-                      isFullScreen={isFullScreen}
-                      layoutSize={layoutSize}
-                    />
-                  </div>
+                  )}
                 </div>
               </section>
             </main>

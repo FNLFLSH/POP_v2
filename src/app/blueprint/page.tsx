@@ -1,12 +1,11 @@
 'use client';
 
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Sparkles, FlaskConical } from "lucide-react";
 import { useEffect, useState, Suspense, useMemo } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building3D } from "@/components/visuals/Building3D";
-import { BeaconPin } from "@/components/icons/BeaconPin";
 import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 
 type VenuePayload = {
@@ -234,13 +233,12 @@ function VenueBlueprintContent() {
                 )}
               </div>
 
-              <div className="flex flex-col items-center gap-6 text-center">
+              <div className="flex flex-col items-center gap-4 text-center">
                 {saveError && (
                   <div className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-2 text-xs text-red-100">
                     {saveError}
                   </div>
                 )}
-                <div className="text-xs uppercase tracking-[0.4em] text-white/50">Send to DesignLabz Suite</div>
                 <Link
                   href={`/designlabs?address=${encodeURIComponent(address)}&fullscreen=1`}
                   onClick={(event) => {
@@ -254,12 +252,15 @@ function VenueBlueprintContent() {
                       }));
                     }
                   }}
-                  className={`transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
+                  className={`group flex flex-col items-center gap-3 transition-all hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
                     saving || loading ? "pointer-events-none opacity-40" : ""
                   }`}
                   aria-label="Launch DesignLabz Suite Full Screen"
                 >
-                  <BeaconPin aria-hidden animated={false} className="h-20 w-20" />
+                  <FlaskConical className="h-16 w-16 md:h-20 md:w-20 text-white drop-shadow-[0_0_20px_rgba(168,85,247,0.5)] group-hover:drop-shadow-[0_0_30px_rgba(168,85,247,0.7)] transition-all" />
+                  <span className="text-xs md:text-sm uppercase tracking-[0.3em] text-white/90 font-semibold">
+                    DESIGN LABZ
+                  </span>
                 </Link>
               </div>
             </div>

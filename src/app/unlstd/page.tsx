@@ -15,6 +15,7 @@ import {
   Clock,
   Ticket,
   ChevronDown,
+  Plus,
 } from "lucide-react";
 import GlobalThemeToggle from "@/components/common/GlobalThemeToggle";
 import { useThemeContext } from "@/components/providers/ThemeProvider";
@@ -464,24 +465,40 @@ function Header() {
   
   return (
     <header className="space-y-4">
-      <div className="flex flex-col items-start gap-2 text-left">
-        <div className={clsx(
-          "text-xs uppercase tracking-[0.32em]",
-          isDarkTheme ? "text-white/60" : "text-black/60"
-        )}>
-          discover
-        </div>
-        <div className="flex items-center gap-3">
-          <Compass className={clsx(
-            "h-8 w-8",
-            isDarkTheme ? "text-white" : "text-black"
-          )} />
-          <h1 className={clsx(
-            "text-3xl font-black tracking-tight sm:text-4xl",
-            isDarkTheme ? "text-white" : "text-black"
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col items-start gap-2 text-left">
+          <div className={clsx(
+            "text-xs uppercase tracking-[0.32em]",
+            isDarkTheme ? "text-white/60" : "text-black/60"
           )}>
-            Find your next night
-          </h1>
+            discover
+          </div>
+          <div className="flex items-center gap-3">
+            <Compass className={clsx(
+              "h-8 w-8",
+              isDarkTheme ? "text-white" : "text-black"
+            )} />
+            <h1 className={clsx(
+              "text-3xl font-black tracking-tight sm:text-4xl",
+              isDarkTheme ? "text-white" : "text-black"
+            )}>
+              Find your next night
+            </h1>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <Link 
+            href="/intake"
+            className={clsx(
+              "group relative inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.35em] transition-all duration-200 hover:scale-105",
+              isDarkTheme
+                ? "bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 text-white/90 hover:from-purple-500/30 hover:to-pink-500/30 hover:border-purple-400/50 hover:text-white backdrop-blur-sm"
+                : "bg-gradient-to-r from-purple-100 to-pink-100 border border-purple-300/50 text-purple-900/90 hover:from-purple-200 hover:to-pink-200 hover:border-purple-400/70"
+            )}
+          >
+            <Plus className="h-3 w-3" />
+            <span className="font-semibold">Host</span>
+          </Link>
         </div>
       </div>
     </header>

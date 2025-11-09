@@ -227,7 +227,7 @@ export function FloorPlan3D({
   };
 
   return (
-    <div className="relative w-full h-full bg-gradient-to-b from-gray-900 to-black rounded-lg overflow-hidden">
+    <div className="absolute inset-0 w-full h-full bg-gradient-to-b from-gray-900 to-black overflow-hidden">
       <Canvas
         gl={{ antialias: true, alpha: true }}
         className="w-full h-full"
